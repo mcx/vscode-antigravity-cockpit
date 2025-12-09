@@ -68,10 +68,18 @@ export class ReactorCore {
                 timeout: TIMING.HTTP_TIMEOUT_MS,
             };
 
+            logger.info(`Transmitting signal to ${endpoint}`, JSON.parse(data));
+
             const req = https.request(opts, res => {
                 let body = '';
                 res.on('data', c => (body += c));
                 res.on('end', () => {
+                    logger.info(`Signal Received (${res.statusCode}):`, {
+                        statusCode: res.statusCode,
+                        bodyLength: body.length
+                    });
+                    // logger.debug('Signal Body:', body); // 取消注释以查看完整响应
+
                     try {
                         resolve(JSON.parse(body) as T);
                     } catch (e) {
@@ -147,6 +155,16 @@ export class ReactorCore {
             );
 
             const telemetry = this.decodeSignal(raw);
+
+            // 打印关键配额信息
+            // 打印关键配额信息
+            const maxLabelLen = Math.max(...telemetry.models.map(m => m.label.length));
+            const quotaSummary = telemetry.models.map(m => {
+                const pct = m.remainingPercentage !== undefined ? m.remainingPercentage.toFixed(2) + '%' : 'N/A';
+                return `    ${m.label.padEnd(maxLabelLen)} : ${pct}`;
+            }).join('\n');
+            
+            logger.info(`Quota Update:\n${quotaSummary}`);
 
             // 检查并发送配额通知
             this.checkAndNotify(telemetry);

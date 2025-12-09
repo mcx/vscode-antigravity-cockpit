@@ -145,7 +145,6 @@ function setupMessageHandling(): void {
 
             case 'init':
                 hud.rehydrate();
-                reactor.syncTelemetry();
                 break;
 
             case 'retry':

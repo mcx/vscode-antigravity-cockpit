@@ -24,7 +24,7 @@ export const TIMING = {
     /** 进程命令执行超时 */
     PROCESS_CMD_TIMEOUT_MS: 2000,
     /** 刷新冷却时间 (秒) */
-    REFRESH_COOLDOWN_SECONDS: 20,
+    REFRESH_COOLDOWN_SECONDS: 60,
 } as const;
 
 /** UI 相关常量 */

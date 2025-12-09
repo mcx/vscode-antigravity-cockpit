@@ -207,7 +207,7 @@ export class CockpitHUD {
             <span>${t('dashboard.title')}</span>
         </div>
         <div class="controls">
-            <button id="refresh-btn" class="refresh-btn" title="Manual Refresh (20s Cooldown)">
+            <button id="refresh-btn" class="refresh-btn" title="Manual Refresh (60s Cooldown)">
                 ${t('dashboard.refresh')}
             </button>
             <button id="reset-order-btn" class="refresh-btn" title="Reset to default order">
