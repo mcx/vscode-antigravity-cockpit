@@ -198,8 +198,18 @@ function setupTelemetryHandling(): void {
         updateStatusBar(snapshot, config);
     });
 
-    reactor.onMalfunction((err: Error) => {
+    reactor.onMalfunction(async (err: Error) => {
         logger.error(`Reactor Malfunction: ${err.message}`);
+
+        // 如果是连接被拒绝（ECONNREFUSED），说明端口可能变了，直接重新扫描
+        if (err.message.includes('ECONNREFUSED') || err.message.includes('Signal Lost')) {
+            logger.warn('Connection lost, initiating immediate re-scan protocol...');
+            systemOnline = false;
+            // 立即尝试重新启动系统（重新扫描端口）
+            await bootSystems();
+            return;
+        }
+
         statusBarItem.text = `$(error) ${t('status.error')}`;
         statusBarItem.tooltip = err.message;
         statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
