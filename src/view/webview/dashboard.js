@@ -15,6 +15,9 @@
     const refreshBtn = document.getElementById('refresh-btn');
     const resetOrderBtn = document.getElementById('reset-order-btn');
     const toast = document.getElementById('toast');
+    const settingsModal = document.getElementById('settings-modal');
+    const lastUpdateBar = document.getElementById('last-update-bar');
+    const lastUpdateText = document.getElementById('last-update-text');
 
     // 国际化文本
     const i18n = window.__i18n || {};
@@ -22,6 +25,7 @@
     // 状态
     let isRefreshing = false;
     let dragSrcEl = null;
+    let currentConfig = {};
 
     // 刷新冷却时间（秒），默认 120 秒
     let refreshCooldown = 120;
@@ -65,6 +69,27 @@
         if (toggleGroupingBtn) {
             toggleGroupingBtn.addEventListener('click', handleToggleGrouping);
         }
+        
+        // 设置按钮
+        const settingsBtn = document.getElementById('settings-btn');
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', openSettingsModal);
+        }
+        
+        // 关闭设置模态框
+        const closeSettingsBtn = document.getElementById('close-settings-btn');
+        if (closeSettingsBtn) {
+            closeSettingsBtn.addEventListener('click', closeSettingsModal);
+        }
+        
+        // 保存设置
+        const saveSettingsBtn = document.getElementById('save-settings-btn');
+        if (saveSettingsBtn) {
+            saveSettingsBtn.addEventListener('click', saveSettings);
+        }
+        
+        // 注：已禁用点击外部关闭，防止拖选数值时误触发关闭
+        // 用户只能通过 × 按钮关闭模态框
 
         // 事件委托：处理置顶开关
         dashboard.addEventListener('change', (e) => {
@@ -81,6 +106,92 @@
 
         // 通知扩展已准备就绪
         vscode.postMessage({ command: 'init' });
+    }
+    
+    // ============ 设置模态框 ============
+    
+    function openSettingsModal() {
+        if (settingsModal) {
+            // 从当前配置填充值
+            const warningInput = document.getElementById('warning-threshold');
+            const criticalInput = document.getElementById('critical-threshold');
+            if (warningInput) warningInput.value = currentConfig.warningThreshold || 30;
+            if (criticalInput) criticalInput.value = currentConfig.criticalThreshold || 10;
+            
+            settingsModal.classList.remove('hidden');
+        }
+    }
+    
+    function closeSettingsModal() {
+        if (settingsModal) {
+            settingsModal.classList.add('hidden');
+        }
+    }
+    
+    function saveSettings() {
+        const warningInput = document.getElementById('warning-threshold');
+        const criticalInput = document.getElementById('critical-threshold');
+        
+        let warningValue = parseInt(warningInput?.value, 10) || 30;
+        let criticalValue = parseInt(criticalInput?.value, 10) || 10;
+        
+        // 自动钳制到有效范围
+        // Warning: 5-80
+        if (warningValue < 5) warningValue = 5;
+        if (warningValue > 80) warningValue = 80;
+        
+        // Critical: 1-50, 且必须小于 warning
+        if (criticalValue < 1) criticalValue = 1;
+        if (criticalValue > 50) criticalValue = 50;
+        
+        // 确保 critical < warning
+        if (criticalValue >= warningValue) {
+            criticalValue = warningValue - 1;
+            if (criticalValue < 1) criticalValue = 1;
+        }
+        
+        // 更新输入框显示钳制后的值
+        if (warningInput) warningInput.value = warningValue;
+        if (criticalInput) criticalInput.value = criticalValue;
+        
+        // 发送到扩展保存
+        vscode.postMessage({ 
+            command: 'updateThresholds', 
+            warningThreshold: warningValue,
+            criticalThreshold: criticalValue 
+        });
+        
+        closeSettingsModal();
+        showToast((i18n['threshold.updated'] || 'Thresholds updated to {value}').replace('{value}', `Warning: ${warningValue}%, Critical: ${criticalValue}%`), 'success');
+    }
+    
+    // ============ 离线时间显示 ============
+    
+    function updateLastUpdateDisplay(lastSuccessfulUpdate) {
+        if (!lastUpdateBar || !lastUpdateText) return;
+        
+        if (!lastSuccessfulUpdate) {
+            lastUpdateBar.classList.add('hidden');
+            return;
+        }
+        
+        const now = new Date();
+        const lastUpdate = new Date(lastSuccessfulUpdate);
+        const diffMs = now - lastUpdate;
+        const diffMinutes = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        
+        let timeText;
+        if (diffMinutes < 1) {
+            timeText = i18n['offline.justNow'] || 'just now';
+        } else if (diffMinutes < 60) {
+            timeText = (i18n['offline.minutesAgo'] || '{count}m ago').replace('{count}', diffMinutes);
+        } else {
+            timeText = (i18n['offline.hoursAgo'] || '{count}h ago').replace('{count}', diffHours);
+        }
+        
+        lastUpdateText.textContent = (i18n['offline.lastUpdateAgo'] || 'Last updated {time}').replace('{time}', timeText);
+        lastUpdateBar.classList.remove('hidden');
     }
     
     function handleToggleProfile() {
@@ -158,9 +269,20 @@
             isRefreshing = false;
             updateRefreshButton();
             
-            // 从配置更新刷新冷却时间
-            if (message.config && message.config.refreshInterval) {
-                refreshCooldown = message.config.refreshInterval;
+            // 关闭设置弹框（防止数据更新后弹框状态不一致）
+            closeSettingsModal();
+            
+            // 保存配置
+            if (message.config) {
+                currentConfig = message.config;
+                
+                // 从配置更新刷新冷却时间
+                if (message.config.refreshInterval) {
+                    refreshCooldown = message.config.refreshInterval;
+                }
+                
+                // 更新离线时间显示
+                updateLastUpdateDisplay(message.config.lastSuccessfulUpdate);
             }
             
             render(message.data, message.config);
@@ -209,17 +331,23 @@
     // ============ 工具函数 ============
 
     function getHealthColor(percentage) {
-        // 三色统一规则 (HEALTHY=50, WARNING=30)
-        if (percentage > 50) return 'var(--success)';  // 绿色 > 50%
-        if (percentage > 30) return 'var(--warning)';  // 黄色 30-50%
-        return 'var(--danger)';                        // 红色 <= 30%
+        // 使用配置的阈值
+        const warningThreshold = currentConfig.warningThreshold || 30;
+        const criticalThreshold = currentConfig.criticalThreshold || 10;
+        
+        if (percentage > warningThreshold) return 'var(--success)';  // 绿色
+        if (percentage > criticalThreshold) return 'var(--warning)';  // 黄色
+        return 'var(--danger)';                                       // 红色
     }
 
     function getStatusText(percentage) {
-        // 三色统一规则 (HEALTHY=50, WARNING=30)
-        if (percentage > 50) return i18n['dashboard.active'] || 'Healthy';   // 健康
-        if (percentage > 30) return i18n['dashboard.warning'] || 'Warning';  // 警告
-        return i18n['dashboard.danger'] || 'Danger';                         // 危险
+        // 使用配置的阈值
+        const warningThreshold = currentConfig.warningThreshold || 30;
+        const criticalThreshold = currentConfig.criticalThreshold || 10;
+        
+        if (percentage > warningThreshold) return i18n['dashboard.active'] || 'Healthy';   // 健康
+        if (percentage > criticalThreshold) return i18n['dashboard.warning'] || 'Warning';  // 警告
+        return i18n['dashboard.danger'] || 'Danger';                                        // 危险
     }
 
     function togglePin(modelId) {

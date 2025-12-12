@@ -117,6 +117,30 @@ const translations: Record<SupportedLocale, TranslationMap> = {
         'grouping.toggleHint': 'Toggle group view',
         'grouping.autoGroup': 'Auto Group',
         'grouping.autoGroupHint': 'Recalculate groups based on current quota',
+        // Feedback & Settings
+        'feedback.title': 'Feedback',
+        'feedback.report': 'Report Issue',
+        'feedback.hint': 'Report issues or suggest features',
+        // Threshold Settings
+        'threshold.warning': 'Warning Threshold',
+        'threshold.critical': 'Critical Threshold',
+        'threshold.settings': 'Alert Settings',
+        'threshold.warningHint': 'Quota below this shows yellow warning',
+        'threshold.criticalHint': 'Quota below this shows red danger alert',
+        'threshold.setWarning': 'Set warning threshold (current: {value}%)',
+        'threshold.setCritical': 'Set critical threshold (current: {value}%)',
+        'threshold.inputWarning': 'Enter warning threshold (5-80)',
+        'threshold.inputCritical': 'Enter critical threshold (1-50)',
+        'threshold.updated': 'Threshold updated to {value}%',
+        'threshold.invalid': 'Invalid value. Please enter a number between {min} and {max}.',
+        'threshold.notifyWarning': '⚠️ {model} quota is low ({percent}%)',
+        'threshold.notifyCritical': '🚨 {model} quota is critically low ({percent}%)!',
+        // Offline Status
+        'offline.lastUpdate': 'Last Update',
+        'offline.lastUpdateAgo': 'Last updated {time} ago',
+        'offline.justNow': 'just now',
+        'offline.minutesAgo': '{count}m ago',
+        'offline.hoursAgo': '{count}h ago',
     },
     'zh-cn': {
         // 状态栏
@@ -220,6 +244,30 @@ const translations: Record<SupportedLocale, TranslationMap> = {
         'grouping.toggleHint': '切换分组视图',
         'grouping.autoGroup': '自动分组',
         'grouping.autoGroupHint': '根据当前配额重新计算分组',
+        // Feedback & Settings
+        'feedback.title': '反馈',
+        'feedback.report': '报告问题',
+        'feedback.hint': '报告问题或建议功能',
+        // Threshold Settings
+        'threshold.warning': '警告阈值',
+        'threshold.critical': '危险阈值',
+        'threshold.settings': '提醒设置',
+        'threshold.warningHint': '配额低于此值时显示黄色警告',
+        'threshold.criticalHint': '配额低于此值时显示红色危险提示',
+        'threshold.setWarning': '设置警告阈值 (当前: {value}%)',
+        'threshold.setCritical': '设置危险阈值 (当前: {value}%)',
+        'threshold.inputWarning': '请输入警告阈值 (5-80)',
+        'threshold.inputCritical': '请输入危险阈值 (1-50)',
+        'threshold.updated': '阈值已更新为 {value}%',
+        'threshold.invalid': '无效的值。请输入 {min} 到 {max} 之间的数字。',
+        'threshold.notifyWarning': '⚠️ {model} 配额较低 ({percent}%)',
+        'threshold.notifyCritical': '🚨 {model} 配额严重不足 ({percent}%)！',
+        // Offline Status
+        'offline.lastUpdate': '最后更新',
+        'offline.lastUpdateAgo': '最后更新于 {time}',
+        'offline.justNow': '刚刚',
+        'offline.minutesAgo': '{count}分钟前',
+        'offline.hoursAgo': '{count}小时前',
     },
 };
 

@@ -281,7 +281,8 @@ export type WebviewMessageType =
     | 'promptRenameGroup'
     | 'toggleGroupPin'
     | 'updateGroupOrder'
-    | 'autoGroup';
+    | 'autoGroup'
+    | 'updateThresholds';
 
 /** Webview 消息 */
 export interface WebviewMessage {
@@ -296,6 +297,10 @@ export interface WebviewMessage {
     currentName?: string;
     /** 分组内所有模型 ID */
     modelIds?: string[];
+    /** 警告阈值 (updateThresholds) */
+    warningThreshold?: number;
+    /** 危险阈值 (updateThresholds) */
+    criticalThreshold?: number;
 }
 
 /** Dashboard 配置 */
@@ -318,6 +323,12 @@ export interface DashboardConfig {
     groupOrder: string[];
     /** 刷新冷却时间（秒） */
     refreshInterval: number;
+    /** 警告阈值 (%) */
+    warningThreshold?: number;
+    /** 危险阈值 (%) */
+    criticalThreshold?: number;
+    /** 最后成功更新时间 */
+    lastSuccessfulUpdate?: Date | null;
 }
 
 /** 状态栏更新数据 */

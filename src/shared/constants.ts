@@ -3,15 +3,18 @@
  * 集中管理所有硬编码的魔法值
  */
 
-/** 配额健康度阈值 */
+/** 配额健康度默认阈值 */
 export const QUOTA_THRESHOLDS = {
     /** 健康状态阈值 (> 50%) */
     HEALTHY: 50,
-    /** 警告状态阈值 (> 30%) - 黄色 */
-    WARNING: 30,
-    /** 危险状态阈值 (<= 10%) - 红色 */
-    CRITICAL: 10,
+    /** 警告状态默认阈值 (> 30%) - 黄色 */
+    WARNING_DEFAULT: 30,
+    /** 危险状态默认阈值 (<= 10%) - 红色 */
+    CRITICAL_DEFAULT: 10,
 } as const;
+
+/** 反馈链接 */
+export const FEEDBACK_URL = 'https://github.com/jlcodes99/vscode-antigravity-cockpit/issues';
 
 /** 时间相关常量 (毫秒) */
 export const TIMING = {
@@ -64,6 +67,8 @@ export const CONFIG_KEYS = {
     PINNED_GROUPS: 'pinnedGroups',
     GROUP_ORDER: 'groupOrder',
     GROUP_MAPPINGS: 'groupMappings',
+    WARNING_THRESHOLD: 'warningThreshold',
+    CRITICAL_THRESHOLD: 'criticalThreshold',
 } as const;
 
 /** 状态栏显示格式 */

@@ -3,6 +3,8 @@
 > A futuristic dashboard for monitoring Google Antigravity AI quotas in VS Code.
 
 [![Version](https://img.shields.io/visual-studio-marketplace/v/jlcodes.antigravity-cockpit)](https://marketplace.visualstudio.com/items?itemName=jlcodes.antigravity-cockpit)
+[![GitHub stars](https://img.shields.io/github/stars/jlcodes99/vscode-antigravity-cockpit?style=flat&color=gold)](https://github.com/jlcodes99/vscode-antigravity-cockpit)
+[![GitHub issues](https://img.shields.io/github/issues/jlcodes99/vscode-antigravity-cockpit)](https://github.com/jlcodes99/vscode-antigravity-cockpit/issues)
 [![License](https://img.shields.io/github/license/jlcodes99/vscode-antigravity-cockpit)](https://github.com/jlcodes99/vscode-antigravity-cockpit)
 
 **Antigravity Cockpit** transforms your coding experience with a premium, Cyberpunk-styled HUD for monitoring AI model quotas. Say goodbye to guessing when your models limits reset.
@@ -251,6 +253,20 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ### v1.0.2
 - Initial public release
+
+---
+
+## ⭐ Support This Project
+
+If you find **Antigravity Cockpit** useful, consider giving it a star on GitHub! Your support helps keep this project alive and motivates further development.
+
+[![GitHub stars](https://img.shields.io/github/stars/jlcodes99/vscode-antigravity-cockpit?style=social)](https://github.com/jlcodes99/vscode-antigravity-cockpit)
+
+- ⭐ **[Star on GitHub](https://github.com/jlcodes99/vscode-antigravity-cockpit)** - Show your support!
+- 💬 **[Report Issues / Feedback](https://github.com/jlcodes99/vscode-antigravity-cockpit/issues)** - Help us improve!
+- 📖 **[Rate on Marketplace](https://marketplace.visualstudio.com/items?itemName=jlcodes.antigravity-cockpit&ssr=false#review-details)** - Leave a review!
+
+> 如果觉得这个插件好用，给个 ⭐ Star 支持一下吧！您的支持是我持续更新的动力 💪
 
 ---
 

@@ -246,8 +246,9 @@ export class ReactorCore {
                 );
             }
 
-            // 低配额警告（仅警告一次）
-            if (percentage > 0 && percentage <= QUOTA_THRESHOLDS.WARNING && 
+            // 低配额警告（仅警告一次）- 使用配置的阈值
+            const warningThreshold = config.warningThreshold;
+            if (percentage > 0 && percentage <= warningThreshold && 
                 !this.warningNotifiedModels.has(model.modelId)) {
                 this.warningNotifiedModels.add(model.modelId);
                 vscode.window.showInformationMessage(
@@ -259,7 +260,7 @@ export class ReactorCore {
             }
 
             // 配额恢复后重置通知状态
-            if (percentage > QUOTA_THRESHOLDS.WARNING) {
+            if (percentage > warningThreshold) {
                 this.exhaustedNotifiedModels.delete(model.modelId);
                 this.warningNotifiedModels.delete(model.modelId);
             }

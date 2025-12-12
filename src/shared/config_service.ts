@@ -4,7 +4,7 @@
  */
 
 import * as vscode from 'vscode';
-import { CONFIG_KEYS, TIMING, LOG_LEVELS, STATUS_BAR_FORMAT } from './constants';
+import { CONFIG_KEYS, TIMING, LOG_LEVELS, STATUS_BAR_FORMAT, QUOTA_THRESHOLDS } from './constants';
 import { logger } from './log_service';
 
 /** 配置对象接口 */
@@ -35,6 +35,10 @@ export interface CockpitConfig {
     groupOrder: string[];
     /** 分组映射 (modelId -> groupId) */
     groupMappings: Record<string, string>;
+    /** 警告阈值 (%) */
+    warningThreshold: number;
+    /** 危险阈值 (%) */
+    criticalThreshold: number;
 }
 
 /** 配置服务类 */
@@ -72,6 +76,8 @@ class ConfigService {
             pinnedGroups: config.get<string[]>(CONFIG_KEYS.PINNED_GROUPS, []),
             groupOrder: config.get<string[]>(CONFIG_KEYS.GROUP_ORDER, []),
             groupMappings: config.get<Record<string, string>>(CONFIG_KEYS.GROUP_MAPPINGS, {}),
+            warningThreshold: config.get<number>(CONFIG_KEYS.WARNING_THRESHOLD, QUOTA_THRESHOLDS.WARNING_DEFAULT),
+            criticalThreshold: config.get<number>(CONFIG_KEYS.CRITICAL_THRESHOLD, QUOTA_THRESHOLDS.CRITICAL_DEFAULT),
         };
     }
 

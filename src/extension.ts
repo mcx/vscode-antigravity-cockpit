@@ -10,7 +10,7 @@ import { logger } from './shared/log_service';
 import { configService, CockpitConfig } from './shared/config_service';
 import { t } from './shared/i18n';
 import { CockpitHUD } from './view/hud';
-import { QUOTA_THRESHOLDS, STATUS_BAR_FORMAT } from './shared/constants';
+import { QUOTA_THRESHOLDS, STATUS_BAR_FORMAT, FEEDBACK_URL } from './shared/constants';
 import { QuotaSnapshot, WebviewMessage } from './shared/types';
 
 // 全局模块实例
@@ -19,6 +19,12 @@ let reactor: ReactorCore;
 let hud: CockpitHUD;
 let statusBarItem: vscode.StatusBarItem;
 let systemOnline = false;
+
+// 离线状态跟踪
+let lastSuccessfulUpdate: Date | null = null;
+
+// 用于跟踪已经通知过的模型（避免重复通知）
+const notifiedModels: Set<string> = new Set();
 
 /**
  * 扩展激活入口
@@ -105,6 +111,69 @@ function registerCommands(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('agCockpit.retry', async () => {
             systemOnline = false;
             await bootSystems();
+        }),
+    );
+
+    // 打开反馈页面
+    context.subscriptions.push(
+        vscode.commands.registerCommand('agCockpit.openFeedback', () => {
+            vscode.env.openExternal(vscode.Uri.parse(FEEDBACK_URL));
+        }),
+    );
+
+    // 设置警告阈值
+    context.subscriptions.push(
+        vscode.commands.registerCommand('agCockpit.setWarningThreshold', async () => {
+            const config = configService.getConfig();
+            const input = await vscode.window.showInputBox({
+                prompt: t('threshold.setWarning', { value: config.warningThreshold }),
+                placeHolder: t('threshold.inputWarning'),
+                value: String(config.warningThreshold),
+                validateInput: (value) => {
+                    const num = parseInt(value, 10);
+                    if (isNaN(num) || num < 5 || num > 80) {
+                        return t('threshold.invalid', { min: 5, max: 80 });
+                    }
+                    if (num <= config.criticalThreshold) {
+                        return `Warning threshold must be greater than critical threshold (${config.criticalThreshold}%)`;
+                    }
+                    return null;
+                },
+            });
+            if (input) {
+                const newValue = parseInt(input, 10);
+                await configService.updateConfig('warningThreshold', newValue);
+                vscode.window.showInformationMessage(t('threshold.updated', { value: newValue }));
+                reactor.reprocess();
+            }
+        }),
+    );
+
+    // 设置危险阈值
+    context.subscriptions.push(
+        vscode.commands.registerCommand('agCockpit.setCriticalThreshold', async () => {
+            const config = configService.getConfig();
+            const input = await vscode.window.showInputBox({
+                prompt: t('threshold.setCritical', { value: config.criticalThreshold }),
+                placeHolder: t('threshold.inputCritical'),
+                value: String(config.criticalThreshold),
+                validateInput: (value) => {
+                    const num = parseInt(value, 10);
+                    if (isNaN(num) || num < 1 || num > 50) {
+                        return t('threshold.invalid', { min: 1, max: 50 });
+                    }
+                    if (num >= config.warningThreshold) {
+                        return `Critical threshold must be less than warning threshold (${config.warningThreshold}%)`;
+                    }
+                    return null;
+                },
+            });
+            if (input) {
+                const newValue = parseInt(input, 10);
+                await configService.updateConfig('criticalThreshold', newValue);
+                vscode.window.showInformationMessage(t('threshold.updated', { value: newValue }));
+                reactor.reprocess();
+            }
         }),
     );
 }
@@ -275,6 +344,28 @@ function setupMessageHandling(): void {
                     logger.warn('No snapshot data available for auto-grouping');
                 }
                 break;
+
+            case 'updateThresholds':
+                // 处理从 Dashboard 设置模态框发来的阈值更新
+                if (message.warningThreshold !== undefined && message.criticalThreshold !== undefined) {
+                    const warningVal = message.warningThreshold as number;
+                    const criticalVal = message.criticalThreshold as number;
+                    
+                    if (criticalVal < warningVal && warningVal >= 5 && warningVal <= 80 && criticalVal >= 1 && criticalVal <= 50) {
+                        await configService.updateConfig('warningThreshold', warningVal);
+                        await configService.updateConfig('criticalThreshold', criticalVal);
+                        logger.info(`Thresholds updated: warning=${warningVal}%, critical=${criticalVal}%`);
+                        vscode.window.showInformationMessage(
+                            t('threshold.updated', { value: `Warning: ${warningVal}%, Critical: ${criticalVal}` })
+                        );
+                        // 清除通知记录，让新阈值生效
+                        notifiedModels.clear();
+                        reactor.reprocess();
+                    } else {
+                        logger.warn('Invalid threshold values received from dashboard');
+                    }
+                }
+                break;
         }
     });
 }
@@ -286,9 +377,15 @@ function setupTelemetryHandling(): void {
     reactor.onTelemetry(async (snapshot: QuotaSnapshot) => {
         let config = configService.getConfig();
 
+        // 记录最后成功更新时间
+        lastSuccessfulUpdate = new Date();
+
         // 成功获取数据，重置错误状态
         statusBarItem.backgroundColor = undefined;
         statusBarItem.tooltip = t('statusBar.tooltip');
+
+        // 检查配额并发送通知
+        checkAndNotifyQuota(snapshot, config);
 
         // 自动将新分组添加到 pinnedGroups（第一次开启分组时默认全部显示在状态栏）
         if (config.groupingEnabled && snapshot.groups && snapshot.groups.length > 0) {
@@ -315,6 +412,9 @@ function setupTelemetryHandling(): void {
             pinnedGroups: config.pinnedGroups,
             groupOrder: config.groupOrder,
             refreshInterval: config.refreshInterval,
+            warningThreshold: config.warningThreshold,
+            criticalThreshold: config.criticalThreshold,
+            lastSuccessfulUpdate: lastSuccessfulUpdate,
         });
 
         // 更新状态栏
@@ -385,7 +485,7 @@ function updateStatusBar(snapshot: QuotaSnapshot, config: CockpitConfig): void {
             // 显示置顶分组
             monitoredGroups.forEach(g => {
                 const pct = g.remainingPercentage;
-                const text = formatStatusBarText(g.groupName, pct, config.statusBarFormat);
+                const text = formatStatusBarText(g.groupName, pct, config.statusBarFormat, config);
                 statusTextParts.push(text);
                 if (pct < minPercentage) {
                     minPercentage = pct;
@@ -435,7 +535,7 @@ function updateStatusBar(snapshot: QuotaSnapshot, config: CockpitConfig): void {
             // 显示置顶模型
             monitoredModels.forEach(m => {
                 const pct = m.remainingPercentage ?? 0;
-                const text = formatStatusBarText(m.label, pct, config.statusBarFormat);
+                const text = formatStatusBarText(m.label, pct, config.statusBarFormat, config);
                 statusTextParts.push(text);
                 if (pct < minPercentage) {
                     minPercentage = pct;
@@ -508,7 +608,7 @@ function generateQuotaTooltip(snapshot: QuotaSnapshot, config: CockpitConfig): v
 
     for (const model of sortedModels) {
         const pct = model.remainingPercentage ?? 0;
-        const icon = getStatusIcon(pct);
+        const icon = getStatusIcon(pct, config);
         const bar = generateCompactProgressBar(pct);
         const resetTime = model.timeUntilResetFormatted || '-';
 
@@ -560,22 +660,22 @@ function getShortModelName(label: string): string {
 }
 
 /**
- * 获取状态图标（三色统一规则）
- * 🟢 > 50% (健康)
- * 🟡 30% - 50% (警告)
- * 🔴 <= 30% (危险)
+ * 获取状态图标（基于配置的阈值）
  */
-function getStatusIcon(percentage: number): string {
-    if (percentage <= QUOTA_THRESHOLDS.WARNING) return '🔴';  // <= 30%
-    if (percentage <= QUOTA_THRESHOLDS.HEALTHY) return '🟡';  // <= 50%
-    return '🟢'; // > 50%
+function getStatusIcon(percentage: number, config?: CockpitConfig): string {
+    const warningThreshold = config?.warningThreshold ?? QUOTA_THRESHOLDS.WARNING_DEFAULT;
+    const criticalThreshold = config?.criticalThreshold ?? QUOTA_THRESHOLDS.CRITICAL_DEFAULT;
+    
+    if (percentage <= criticalThreshold) return '🔴';  // 危险
+    if (percentage <= warningThreshold) return '🟡';    // 警告
+    return '🟢'; // 健康
 }
 
 /**
  * 格式化状态栏文本（带颜色球前缀）
  */
-function formatStatusBarText(label: string, percentage: number, format: string): string {
-    const icon = getStatusIcon(percentage);
+function formatStatusBarText(label: string, percentage: number, format: string, config?: CockpitConfig): string {
+    const icon = getStatusIcon(percentage, config);
     switch (format) {
         case STATUS_BAR_FORMAT.COMPACT:
             return `${icon} ${Math.floor(percentage)}%`;
@@ -584,6 +684,60 @@ function formatStatusBarText(label: string, percentage: number, format: string):
         case STATUS_BAR_FORMAT.STANDARD:
         default:
             return `${icon} ${label}: ${Math.floor(percentage)}%`;
+    }
+}
+
+/**
+ * 检查配额并发送通知
+ * 当配额达到警告或危险阈值时弹框提醒
+ */
+function checkAndNotifyQuota(snapshot: QuotaSnapshot, config: CockpitConfig): void {
+    if (!config.notificationEnabled) {
+        return;
+    }
+
+    const warningThreshold = config.warningThreshold ?? QUOTA_THRESHOLDS.WARNING_DEFAULT;
+    const criticalThreshold = config.criticalThreshold ?? QUOTA_THRESHOLDS.CRITICAL_DEFAULT;
+
+    for (const model of snapshot.models) {
+        const pct = model.remainingPercentage ?? 0;
+        const notifyKey = `${model.modelId}-${pct <= criticalThreshold ? 'critical' : 'warning'}`;
+
+        // 如果已经通知过这个状态，跳过
+        if (notifiedModels.has(notifyKey)) {
+            continue;
+        }
+
+        // 危险阈值通知（红色）
+        if (pct <= criticalThreshold && pct > 0) {
+            // 清除之前的 warning 通知记录（如果有）
+            notifiedModels.delete(`${model.modelId}-warning`);
+            notifiedModels.add(notifyKey);
+            
+            vscode.window.showWarningMessage(
+                t('threshold.notifyCritical', { model: model.label, percent: pct.toFixed(1) }),
+                t('dashboard.refresh'),
+            ).then(selection => {
+                if (selection === t('dashboard.refresh')) {
+                    reactor.syncTelemetry();
+                }
+            });
+            logger.info(`Critical threshold notification sent for ${model.label}: ${pct}%`);
+        }
+        // 警告阈值通知（黄色）
+        else if (pct <= warningThreshold && pct > criticalThreshold) {
+            notifiedModels.add(notifyKey);
+            
+            vscode.window.showInformationMessage(
+                t('threshold.notifyWarning', { model: model.label, percent: pct.toFixed(1) }),
+            );
+            logger.info(`Warning threshold notification sent for ${model.label}: ${pct}%`);
+        }
+        // 配额恢复时清除通知记录
+        else if (pct > warningThreshold) {
+            notifiedModels.delete(`${model.modelId}-warning`);
+            notifiedModels.delete(`${model.modelId}-critical`);
+        }
     }
 }
 

@@ -275,8 +275,15 @@ export class CockpitHUD {
             <button id="toggle-profile-btn" class="refresh-btn" title="${t('profile.togglePlan')}">
                 ${t('profile.planDetails')}
             </button>
+            <button id="settings-btn" class="refresh-btn icon-only" title="${t('threshold.settings')}">
+                ⚙️
+            </button>
         </div>
     </header>
+
+    <div id="last-update-bar" class="last-update-bar hidden">
+        <span id="last-update-text"></span>
+    </div>
 
     <div id="status" class="status-connecting">
         <span class="spinner"></span>
@@ -287,7 +294,54 @@ export class CockpitHUD {
         <!-- Injected via JS -->
     </div>
 
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙️ ${t('threshold.settings')}</h3>
+                <button id="close-settings-btn" class="close-btn">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-item">
+                    <label for="warning-threshold">🟡 ${t('threshold.warning')}</label>
+                    <div class="setting-input-group">
+                        <input type="number" id="warning-threshold" min="5" max="80" value="30">
+                        <span class="unit">%</span>
+                        <span class="range-hint">(5-80)</span>
+                    </div>
+                    <p class="setting-hint">${t('threshold.warningHint')}</p>
+                </div>
+                <div class="setting-item">
+                    <label for="critical-threshold">🔴 ${t('threshold.critical')}</label>
+                    <div class="setting-input-group">
+                        <input type="number" id="critical-threshold" min="1" max="50" value="10">
+                        <span class="unit">%</span>
+                        <span class="range-hint">(1-50)</span>
+                    </div>
+                    <p class="setting-hint">${t('threshold.criticalHint')}</p>
+                </div>
+                <p class="setting-note">💡 ${i18n.getLocale() === 'zh-cn' ? '超出范围的值会自动调整' : 'Out-of-range values will be auto-adjusted'}</p>
+            </div>
+            <div class="modal-footer">
+                <button id="save-settings-btn" class="btn-primary">${i18n.getLocale() === 'zh-cn' ? '保存' : 'Save'}</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast" class="toast hidden"></div>
+
+    <footer class="dashboard-footer">
+        <div class="footer-content">
+            <span class="footer-text">${i18n.getLocale() === 'zh-cn' ? '觉得好用？给个 ⭐ 支持一下！' : 'Enjoying this? Give us a ⭐!'}</span>
+            <div class="footer-links">
+                <a href="https://github.com/jlcodes99/vscode-antigravity-cockpit" target="_blank" class="footer-link star-link">
+                    ⭐ Star
+                </a>
+                <a href="https://github.com/jlcodes99/vscode-antigravity-cockpit/issues" target="_blank" class="footer-link feedback-link">
+                    💬 ${i18n.getLocale() === 'zh-cn' ? '反馈' : 'Feedback'}
+                </a>
+            </div>
+        </div>
+    </footer>
 
     <script nonce="${nonce}">
         // 注入国际化文本
