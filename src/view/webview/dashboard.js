@@ -16,8 +16,7 @@
     const resetOrderBtn = document.getElementById('reset-order-btn');
     const toast = document.getElementById('toast');
     const settingsModal = document.getElementById('settings-modal');
-    const lastUpdateBar = document.getElementById('last-update-bar');
-    const lastUpdateText = document.getElementById('last-update-text');
+    const renameModal = document.getElementById('rename-modal');
 
     // 国际化文本
     const i18n = window.__i18n || {};
@@ -26,6 +25,8 @@
     let isRefreshing = false;
     let dragSrcEl = null;
     let currentConfig = {};
+    let renameGroupId = null; // 当前正在重命名的分组 ID
+    let renameModelIds = [];  // 当前分组包含的模型 ID
 
     // 刷新冷却时间（秒），默认 120 秒
     let refreshCooldown = 120;
@@ -88,8 +89,27 @@
             saveSettingsBtn.addEventListener('click', saveSettings);
         }
         
-        // 注：已禁用点击外部关闭，防止拖选数值时误触发关闭
-        // 用户只能通过 × 按钮关闭模态框
+        // 重命名模态框 - 关闭按钮
+        const closeRenameBtn = document.getElementById('close-rename-btn');
+        if (closeRenameBtn) {
+            closeRenameBtn.addEventListener('click', closeRenameModal);
+        }
+        
+        // 重命名模态框 - 确定按钮
+        const saveRenameBtn = document.getElementById('save-rename-btn');
+        if (saveRenameBtn) {
+            saveRenameBtn.addEventListener('click', saveRename);
+        }
+        
+        // 重命名输入框 - 回车键确认
+        const renameInput = document.getElementById('rename-input');
+        if (renameInput) {
+            renameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    saveRename();
+                }
+            });
+        }
 
         // 事件委托：处理置顶开关
         dashboard.addEventListener('change', (e) => {
@@ -170,33 +190,53 @@
         showToast((i18n['threshold.updated'] || 'Thresholds updated to {value}').replace('{value}', `Warning: ${warningValue}%, Critical: ${criticalValue}%`), 'success');
     }
     
-    // ============ 离线时间显示 ============
+    // ============ 重命名模态框 ============
     
-    function updateLastUpdateDisplay(lastSuccessfulUpdate) {
-        if (!lastUpdateBar || !lastUpdateText) return;
+    function openRenameModal(groupId, currentName, modelIds) {
+        if (renameModal) {
+            renameGroupId = groupId;
+            renameModelIds = modelIds || [];
+            
+            const renameInput = document.getElementById('rename-input');
+            if (renameInput) {
+                renameInput.value = currentName || '';
+                renameInput.focus();
+                renameInput.select();
+            }
+            
+            renameModal.classList.remove('hidden');
+        }
+    }
+    
+    function closeRenameModal() {
+        if (renameModal) {
+            renameModal.classList.add('hidden');
+            renameGroupId = null;
+            renameModelIds = [];
+        }
+    }
+    
+    function saveRename() {
+        const renameInput = document.getElementById('rename-input');
+        const newName = renameInput?.value?.trim();
         
-        if (!lastSuccessfulUpdate) {
-            lastUpdateBar.classList.add('hidden');
+        if (!newName) {
+            showToast(i18n['grouping.nameEmpty'] || 'Name cannot be empty', 'error');
             return;
         }
         
-        const now = new Date();
-        const lastUpdate = new Date(lastSuccessfulUpdate);
-        const diffMs = now - lastUpdate;
-        const diffMinutes = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        
-        let timeText;
-        if (diffMinutes < 1) {
-            timeText = i18n['offline.justNow'] || 'just now';
-        } else if (diffMinutes < 60) {
-            timeText = (i18n['offline.minutesAgo'] || '{count}m ago').replace('{count}', diffMinutes);
-        } else {
-            timeText = (i18n['offline.hoursAgo'] || '{count}h ago').replace('{count}', diffHours);
+        if (renameGroupId && renameModelIds.length > 0) {
+            vscode.postMessage({
+                command: 'renameGroup',
+                groupId: renameGroupId,
+                groupName: newName,
+                modelIds: renameModelIds
+            });
+            
+            showToast((i18n['grouping.renamed'] || 'Renamed to {name}').replace('{name}', newName), 'success');
         }
         
-        lastUpdateText.textContent = (i18n['offline.lastUpdateAgo'] || 'Last updated {time}').replace('{time}', timeText);
-        lastUpdateBar.classList.remove('hidden');
+        closeRenameModal();
     }
     
     function handleToggleProfile() {
@@ -285,9 +325,6 @@
                 if (message.config.refreshInterval) {
                     refreshCooldown = message.config.refreshInterval;
                 }
-                
-                // 更新离线时间显示
-                updateLastUpdateDisplay(message.config.lastSuccessfulUpdate);
             }
             
             render(message.data, message.config);
@@ -746,17 +783,16 @@
             </div>
         `;
         
-        // 绑定重命名按钮事件 - 发送消息让扩展显示输入框
+        // 绑定重命名按钮事件 - 打开模态框
         const renameBtn = card.querySelector('.rename-group-btn');
         if (renameBtn) {
             renameBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                vscode.postMessage({ 
-                    command: 'promptRenameGroup', 
-                    groupId: group.groupId,
-                    currentName: group.groupName,
-                    modelIds: group.models.map(m => m.modelId)
-                });
+                openRenameModal(
+                    group.groupId,
+                    group.groupName,
+                    group.models.map(m => m.modelId)
+                );
             });
         }
         
