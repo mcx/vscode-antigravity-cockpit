@@ -32,7 +32,12 @@ const notifiedModels: Set<string> = new Set();
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
     // 初始化日志
     logger.init();
-    logger.info('Antigravity Cockpit Systems: Online');
+    
+    // 获取插件版本号
+    const packageJson = require('../package.json');
+    const version = packageJson.version || 'unknown';
+    
+    logger.info(`Antigravity Cockpit v${version} - Systems Online`);
 
     // 初始化模块
     hunter = new ProcessHunter();
