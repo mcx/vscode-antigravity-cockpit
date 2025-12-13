@@ -24,8 +24,7 @@
     "url": "https://github.com/jlcodes99/vscode-antigravity-cockpit.git"
   },
   "activationEvents": [
-    "onStartupFinished",
-    "onCommand:agCockpit.open"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {
