@@ -86,12 +86,6 @@
             closeSettingsBtn.addEventListener('click', closeSettingsModal);
         }
         
-        // 保存设置
-        const saveSettingsBtn = document.getElementById('save-settings-btn');
-        if (saveSettingsBtn) {
-            saveSettingsBtn.addEventListener('click', saveSettings);
-        }
-        
         // 重命名模态框 - 关闭按钮
         const closeRenameBtn = document.getElementById('close-rename-btn');
         if (closeRenameBtn) {
@@ -145,74 +139,91 @@
             const notificationCheckbox = document.getElementById('notification-enabled');
             const warningInput = document.getElementById('warning-threshold');
             const criticalInput = document.getElementById('critical-threshold');
-            if (notificationCheckbox) notificationCheckbox.checked = currentConfig.notificationEnabled !== false; // 默认为 true
+            if (notificationCheckbox) notificationCheckbox.checked = currentConfig.notificationEnabled !== false;
             if (warningInput) warningInput.value = currentConfig.warningThreshold || 30;
             if (criticalInput) criticalInput.value = currentConfig.criticalThreshold || 10;
 
             // 初始化状态栏格式选择器
             initStatusBarFormatSelector();
+            
+            // 初始化即时保存事件
+            initSettingsAutoSave();
 
             settingsModal.classList.remove('hidden');
         }
     }
     
     /**
-     * 初始化状态栏格式选择器
+     * 初始化状态栏格式选择器（下拉框）
      */
     function initStatusBarFormatSelector() {
-        const formatBtns = document.querySelectorAll('.format-btn');
-        const currentFormat = currentConfig.statusBarFormat || 'standard';
+        const formatSelect = document.getElementById('statusbar-format');
+        if (!formatSelect) return;
         
-        // 高亮当前选中的格式
-        formatBtns.forEach(btn => {
-            const format = btn.getAttribute('data-format');
-            if (format === currentFormat) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
+        const currentFormat = currentConfig.statusBarFormat || 'standard';
+        formatSelect.value = currentFormat;
+        
+        // 绑定 change 事件
+        formatSelect.onchange = null;
+        formatSelect.addEventListener('change', () => {
+            const format = formatSelect.value;
             
-            // 绑定点击事件（移除旧的事件监听器）
-            btn.onclick = null;
-            btn.addEventListener('click', () => {
-                // 更新选中状态
-                formatBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
-                // 发送消息到扩展，立即更新状态栏
-                vscode.postMessage({
-                    command: 'updateStatusBarFormat',
-                    statusBarFormat: format
-                });
-                
-                // 显示反馈
-                const formatLabel = btn.querySelector('.format-label')?.textContent || format;
-                showToast((i18n['statusBarFormat.changed'] || 'Status bar: {format}').replace('{format}', formatLabel), 'success');
+            // 发送消息到扩展，立即更新状态栏
+            vscode.postMessage({
+                command: 'updateStatusBarFormat',
+                statusBarFormat: format
             });
         });
     }
     
-    function closeSettingsModal() {
-        if (settingsModal) {
-            settingsModal.classList.add('hidden');
-        }
-    }
-    
-    function saveSettings() {
+    /**
+     * 初始化设置自动保存（即时生效）
+     */
+    function initSettingsAutoSave() {
         const notificationCheckbox = document.getElementById('notification-enabled');
         const warningInput = document.getElementById('warning-threshold');
         const criticalInput = document.getElementById('critical-threshold');
-
-        const notificationEnabled = notificationCheckbox?.checked ?? true;
+        
+        // 通知开关即时保存
+        if (notificationCheckbox) {
+            notificationCheckbox.onchange = null;
+            notificationCheckbox.addEventListener('change', () => {
+                vscode.postMessage({
+                    command: 'updateNotificationEnabled',
+                    notificationEnabled: notificationCheckbox.checked
+                });
+            });
+        }
+        
+        // 阈值输入框失焦时自动钳位并保存
+        if (warningInput) {
+            warningInput.onblur = null;
+            warningInput.addEventListener('blur', () => {
+                clampAndSaveThresholds();
+            });
+        }
+        
+        if (criticalInput) {
+            criticalInput.onblur = null;
+            criticalInput.addEventListener('blur', () => {
+                clampAndSaveThresholds();
+            });
+        }
+    }
+    
+    /**
+     * 钳位阈值并保存
+     */
+    function clampAndSaveThresholds() {
+        const warningInput = document.getElementById('warning-threshold');
+        const criticalInput = document.getElementById('critical-threshold');
+        
         let warningValue = parseInt(warningInput?.value, 10) || 30;
         let criticalValue = parseInt(criticalInput?.value, 10) || 10;
 
         // 自动钳制到有效范围
-        // Warning: 5-80
         if (warningValue < 5) warningValue = 5;
         if (warningValue > 80) warningValue = 80;
-
-        // Critical: 1-50, 且必须小于 warning
         if (criticalValue < 1) criticalValue = 1;
         if (criticalValue > 50) criticalValue = 50;
 
@@ -226,6 +237,21 @@
         if (warningInput) warningInput.value = warningValue;
         if (criticalInput) criticalInput.value = criticalValue;
 
+        saveThresholds();
+    }
+    
+    /**
+     * 保存阈值设置
+     */
+    function saveThresholds() {
+        const notificationCheckbox = document.getElementById('notification-enabled');
+        const warningInput = document.getElementById('warning-threshold');
+        const criticalInput = document.getElementById('critical-threshold');
+
+        const notificationEnabled = notificationCheckbox?.checked ?? true;
+        const warningValue = parseInt(warningInput?.value, 10) || 30;
+        const criticalValue = parseInt(criticalInput?.value, 10) || 10;
+
         // 发送到扩展保存
         vscode.postMessage({
             command: 'updateThresholds',
@@ -233,9 +259,12 @@
             warningThreshold: warningValue,
             criticalThreshold: criticalValue
         });
-
-        closeSettingsModal();
-        showToast((i18n['threshold.updated'] || 'Thresholds updated to {value}').replace('{value}', `Warning: ${warningValue}%, Critical: ${criticalValue}%`), 'success');
+    }
+    
+    function closeSettingsModal() {
+        if (settingsModal) {
+            settingsModal.classList.add('hidden');
+        }
     }
     
     // ============ 重命名模态框 ============
@@ -414,9 +443,6 @@
         if (message.type === 'telemetry_update') {
             isRefreshing = false;
             updateRefreshButton();
-            
-            // 关闭设置弹框（防止数据更新后弹框状态不一致）
-            closeSettingsModal();
             
             // 保存配置
             if (message.config) {

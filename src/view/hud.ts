@@ -313,29 +313,15 @@ export class CockpitHUD {
             <div class="modal-body">
                 <!-- 状态栏样式选择 -->
                 <div class="setting-item">
-                    <label>📊 ${i18n.t('statusBarFormat.title')}</label>
-                    <div class="statusbar-format-grid">
-                        <button class="format-btn" data-format="icon" title="${i18n.t('statusBarFormat.icon')}">
-                            <span class="format-preview">${i18n.t('statusBarFormat.iconDesc')}</span>
-                            <span class="format-label">${i18n.t('statusBarFormat.icon')}</span>
-                        </button>
-                        <button class="format-btn" data-format="dot" title="${i18n.t('statusBarFormat.dot')}">
-                            <span class="format-preview">${i18n.t('statusBarFormat.dotDesc')}</span>
-                            <span class="format-label">${i18n.t('statusBarFormat.dot')}</span>
-                        </button>
-                        <button class="format-btn" data-format="percent" title="${i18n.t('statusBarFormat.percent')}">
-                            <span class="format-preview">${i18n.t('statusBarFormat.percentDesc')}</span>
-                            <span class="format-label">${i18n.t('statusBarFormat.percent')}</span>
-                        </button>
-                        <button class="format-btn" data-format="compact" title="${i18n.t('statusBarFormat.compact')}">
-                            <span class="format-preview">${i18n.t('statusBarFormat.compactDesc')}</span>
-                            <span class="format-label">${i18n.t('statusBarFormat.compact')}</span>
-                        </button>
-                        <button class="format-btn" data-format="standard" title="${i18n.t('statusBarFormat.standard')}">
-                            <span class="format-preview">${i18n.t('statusBarFormat.standardDesc')}</span>
-                            <span class="format-label">${i18n.t('statusBarFormat.standard')}</span>
-                        </button>
-                    </div>
+                    <label for="statusbar-format">📊 ${i18n.t('statusBarFormat.title')}</label>
+                    <select id="statusbar-format" class="setting-select">
+                        <option value="icon">${i18n.t('statusBarFormat.iconDesc')} - ${i18n.t('statusBarFormat.icon')}</option>
+                        <option value="dot">${i18n.t('statusBarFormat.dotDesc')} - ${i18n.t('statusBarFormat.dot')}</option>
+                        <option value="percent">${i18n.t('statusBarFormat.percentDesc')} - ${i18n.t('statusBarFormat.percent')}</option>
+                        <option value="compact">${i18n.t('statusBarFormat.compactDesc')} - ${i18n.t('statusBarFormat.compact')}</option>
+                        <option value="namePercent">${i18n.t('statusBarFormat.namePercentDesc')} - ${i18n.t('statusBarFormat.namePercent')}</option>
+                        <option value="standard" selected>${i18n.t('statusBarFormat.standardDesc')} - ${i18n.t('statusBarFormat.standard')}</option>
+                    </select>
                 </div>
                 
                 <hr class="setting-divider">
@@ -365,10 +351,6 @@ export class CockpitHUD {
                     </div>
                     <p class="setting-hint">${t('threshold.criticalHint')}</p>
                 </div>
-                <p class="setting-note">💡 ${i18n.getLocale() === 'zh-cn' ? '超出范围的值会自动调整' : 'Out-of-range values will be auto-adjusted'}</p>
-            </div>
-            <div class="modal-footer">
-                <button id="save-settings-btn" class="btn-primary">${i18n.getLocale() === 'zh-cn' ? '保存' : 'Save'}</button>
             </div>
         </div>
     </div>

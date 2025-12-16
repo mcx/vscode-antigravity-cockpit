@@ -3,7 +3,7 @@
   "displayName": "Antigravity Cockpit",
   "icon": "assets/icon.png",
   "description": "A premium, dashboard-style quota monitor for Antigravity AI.",
-  "version": "1.5.1",
+  "version": "1.5.11",
   "publisher": "jlcodes",
   "engines": {
     "vscode": "^1.90.0"
@@ -144,6 +144,7 @@
             "dot",
             "percent",
             "compact",
+            "namePercent",
             "standard"
           ],
           "enumDescriptions": [
@@ -151,6 +152,7 @@
             "Status dot only - 🟢/🟡/🔴",
             "Percentage only - 95%",
             "Dot + percentage - 🟢 95%",
+            "Name + percentage - Sonnet: 95%",
             "Dot + model name + percentage - 🟢 Sonnet: 95% (default)"
           ],
           "description": "Format of the status bar display."

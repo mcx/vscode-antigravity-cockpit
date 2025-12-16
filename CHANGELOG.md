@@ -8,6 +8,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.5.11] - 2025-12-16
+
+### Added
+- **Name + Percent Mode**: New status bar format showing `Sonnet: 95%` (without status dot)
+
+### Changed
+- **Status Bar Selector**: Changed from button grid to dropdown for cleaner UI
+- **Settings Title**: Simplified from "Alert Settings" to "Settings"
+- **Auto-Save Settings**: All settings now auto-save immediately (no Save button needed)
+- **Threshold Auto-Clamp**: Out-of-range values automatically adjusted to valid range
+
+### Fixed
+- **Settings Modal Persistence**: Modal no longer closes when data auto-refreshes
+
+---
+
 ## [1.5.1] - 2025-12-16
 
 ### Added

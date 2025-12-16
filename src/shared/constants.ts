@@ -83,7 +83,9 @@ export const STATUS_BAR_FORMAT = {
     PERCENT: 'percent',
     /** 紧凑模式：状态球 + 百分比 */
     COMPACT: 'compact',
-    /** 标准模式：状态球 + 模型名 + 百分比（默认） */
+    /** 名称+数字模式：模型名 + 百分比（无状态球） */
+    NAME_PERCENT: 'namePercent',
+    /** 完整模式：状态球 + 模型名 + 百分比（默认） */
     STANDARD: 'standard',
 } as const;
 

@@ -385,24 +385,30 @@ function setupMessageHandling(): void {
                 break;
             }
 
+            case 'updateNotificationEnabled':
+                // 处理通知开关变更
+                if (message.notificationEnabled !== undefined) {
+                    const enabled = message.notificationEnabled as boolean;
+                    await configService.updateConfig('notificationEnabled', enabled);
+                    logger.info(`Notification enabled: ${enabled}`);
+                    vscode.window.showInformationMessage(
+                        enabled ? t('notification.enabled') : t('notification.disabled'),
+                    );
+                }
+                break;
+
             case 'updateThresholds':
-                // 处理从 Dashboard 设置模态框发来的阈值更新
+                // 处理阈值更新
                 if (message.warningThreshold !== undefined && message.criticalThreshold !== undefined) {
-                    const notificationEnabled = message.notificationEnabled as boolean | undefined;
                     const warningVal = message.warningThreshold as number;
                     const criticalVal = message.criticalThreshold as number;
 
                     if (criticalVal < warningVal && warningVal >= 5 && warningVal <= 80 && criticalVal >= 1 && criticalVal <= 50) {
-                        // 保存通知开关状态
-                        if (notificationEnabled !== undefined) {
-                            await configService.updateConfig('notificationEnabled', notificationEnabled);
-                            logger.info(`Notification enabled: ${notificationEnabled}`);
-                        }
                         await configService.updateConfig('warningThreshold', warningVal);
                         await configService.updateConfig('criticalThreshold', criticalVal);
                         logger.info(`Thresholds updated: warning=${warningVal}%, critical=${criticalVal}%`);
                         vscode.window.showInformationMessage(
-                            t('threshold.updated', { value: `Warning: ${warningVal}%, Critical: ${criticalVal}` }),
+                            t('threshold.updated', { value: `Warning: ${warningVal}%, Critical: ${criticalVal}%` }),
                         );
                         // 清除通知记录，让新阈值生效
                         notifiedModels.clear();
@@ -774,7 +780,7 @@ function getStatusIcon(percentage: number, config?: CockpitConfig): string {
 }
 
 /**
- * 格式化状态栏文本（支持5种显示模式）
+ * 格式化状态栏文本（支持6种显示模式）
  */
 function formatStatusBarText(label: string, percentage: number, format: string, config?: CockpitConfig): string {
     const dot = getStatusIcon(percentage, config);
@@ -793,6 +799,9 @@ function formatStatusBarText(label: string, percentage: number, format: string, 
         case STATUS_BAR_FORMAT.COMPACT:
             // 状态球 + 数字
             return `${dot} ${pct}`;
+        case STATUS_BAR_FORMAT.NAME_PERCENT:
+            // 模型名 + 数字（无状态球）
+            return `${label}: ${pct}`;
         case STATUS_BAR_FORMAT.STANDARD:
         default:
             // 状态球 + 模型名 + 数字（默认）

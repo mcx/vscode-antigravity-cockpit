@@ -282,6 +282,7 @@ export type WebviewMessageType =
     | 'toggleGroupPin'
     | 'updateGroupOrder'
     | 'autoGroup'
+    | 'updateNotificationEnabled'
     | 'updateThresholds'
     | 'renameModel'
     | 'updateStatusBarFormat';

@@ -133,6 +133,8 @@ const translations: Record<SupportedLocale, TranslationMap> = {
         'statusBarFormat.percentDesc': '95%',
         'statusBarFormat.compact': 'Dot + Percent',
         'statusBarFormat.compactDesc': '🟢 95%',
+        'statusBarFormat.namePercent': 'Name + Percent',
+        'statusBarFormat.namePercentDesc': 'Sonnet: 95%',
         'statusBarFormat.standard': 'Full (Default)',
         'statusBarFormat.standardDesc': '🟢 Sonnet: 95%',
         'statusBarFormat.changed': 'Status bar: {format}',
@@ -143,7 +145,7 @@ const translations: Record<SupportedLocale, TranslationMap> = {
         // Threshold Settings
         'threshold.warning': 'Warning Threshold',
         'threshold.critical': 'Critical Threshold',
-        'threshold.settings': 'Alert Settings',
+        'threshold.settings': 'Settings',
         'threshold.enableNotification': 'Enable Notifications',
         'threshold.enableNotificationHint': 'Show popup alerts when quota drops below thresholds',
         'threshold.warningHint': 'Quota below this shows yellow warning',
@@ -154,6 +156,8 @@ const translations: Record<SupportedLocale, TranslationMap> = {
         'threshold.inputCritical': 'Enter critical threshold (1-50)',
         'threshold.updated': 'Threshold updated to {value}%',
         'threshold.invalid': 'Invalid value. Please enter a number between {min} and {max}.',
+        'notification.enabled': 'Notifications enabled',
+        'notification.disabled': 'Notifications disabled',
         'threshold.notifyWarning': '⚠️ {model} quota is low ({percent}%)',
         'threshold.notifyCritical': '🚨 {model} quota is critically low ({percent}%)!',
         // Offline Status
@@ -296,6 +300,8 @@ const translations: Record<SupportedLocale, TranslationMap> = {
         'statusBarFormat.percentDesc': '95%',
         'statusBarFormat.compact': '状态球+数字',
         'statusBarFormat.compactDesc': '🟢 95%',
+        'statusBarFormat.namePercent': '名称+数字',
+        'statusBarFormat.namePercentDesc': 'Sonnet: 95%',
         'statusBarFormat.standard': '完整显示 (默认)',
         'statusBarFormat.standardDesc': '🟢 Sonnet: 95%',
         'statusBarFormat.changed': '状态栏已切换: {format}',
@@ -306,7 +312,7 @@ const translations: Record<SupportedLocale, TranslationMap> = {
         // Threshold Settings
         'threshold.warning': '警告阈值',
         'threshold.critical': '危险阈值',
-        'threshold.settings': '提醒设置',
+        'threshold.settings': '设置',
         'threshold.enableNotification': '启用弹窗通知',
         'threshold.enableNotificationHint': '当配额低于阈值时显示弹窗提醒',
         'threshold.warningHint': '配额低于此值时显示黄色警告',
@@ -317,6 +323,8 @@ const translations: Record<SupportedLocale, TranslationMap> = {
         'threshold.inputCritical': '请输入危险阈值 (1-50)',
         'threshold.updated': '阈值已更新为 {value}%',
         'threshold.invalid': '无效的值。请输入 {min} 到 {max} 之间的数字。',
+        'notification.enabled': '弹窗通知已启用',
+        'notification.disabled': '弹窗通知已关闭',
         'threshold.notifyWarning': '⚠️ {model} 配额较低 ({percent}%)',
         'threshold.notifyCritical': '🚨 {model} 配额严重不足 ({percent}%)！',
         // Offline Status
