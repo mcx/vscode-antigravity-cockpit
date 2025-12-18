@@ -461,6 +461,15 @@ function setupTelemetryHandling(): void {
         // 检查配额并发送通知
         checkAndNotifyQuota(snapshot, config);
 
+        // 首次安装分组默认启用时，自动生成分组映射并重新渲染
+        if (config.groupingEnabled && Object.keys(config.groupMappings).length === 0 && snapshot.models.length > 0) {
+            const newMappings = ReactorCore.calculateGroupMappings(snapshot.models);
+            await configService.updateGroupMappings(newMappings);
+            logger.info(`Auto-grouped on first run: ${Object.keys(newMappings).length} models`);
+            reactor.reprocess();
+            return;
+        }
+
         // 自动将新分组添加到 pinnedGroups（第一次开启分组时默认全部显示在状态栏）
         if (config.groupingEnabled && snapshot.groups && snapshot.groups.length > 0) {
             const currentPinnedGroups = config.pinnedGroups;
