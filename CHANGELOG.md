@@ -8,6 +8,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.5.16] - 2025-12-19
+
+### Added
+- **Multi-Language Support**: Extended i18n support from 2 to 14 languages
+  - 🇺🇸 English (en)
+  - 🇨🇳 简体中文 (zh-cn)
+  - 🇯🇵 日本語 (ja) - NEW
+  - 🇪🇸 Español (es) - NEW
+  - 🇩🇪 Deutsch (de) - NEW
+  - 🇫🇷 Français (fr) - NEW
+  - 🇧🇷 Português do Brasil (pt-br) - NEW
+  - 🇷🇺 Русский (ru) - NEW
+  - 🇰🇷 한국어 (ko) - NEW
+  - 🇮🇹 Italiano (it) - NEW
+  - 🇹🇼 繁體中文 (zh-tw) - NEW
+  - 🇹🇷 Türkçe (tr) - NEW
+  - 🇵🇱 Polski (pl) - NEW
+  - 🇨🇿 Čeština (cs) - NEW
+
+### Improved
+- **Modular Translations**: Refactored i18n to use separate translation files for better maintainability
+- **Language Detection**: Enhanced locale detection with fallback mapping for language variants
+
+---
+
 ## [1.5.15] - 2025-12-18
 
 ### Improved
