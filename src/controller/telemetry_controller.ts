@@ -23,7 +23,7 @@ export class TelemetryController {
         private statusBar: StatusBarController,
         private hud: CockpitHUD,
         private quickPickView: QuickPickView,
-        private onRetry: () => Promise<void>
+        private onRetry: () => Promise<void>,
     ) {
         this.setupTelemetryHandling();
     }

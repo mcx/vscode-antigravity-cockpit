@@ -14,7 +14,7 @@ export class CommandController {
         private hud: CockpitHUD,
         private quickPickView: QuickPickView,
         private reactor: ReactorCore,
-        private onRetry: () => Promise<void>
+        private onRetry: () => Promise<void>,
     ) {
         this.registerCommands();
     }

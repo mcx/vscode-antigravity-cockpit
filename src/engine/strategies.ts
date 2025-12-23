@@ -22,27 +22,24 @@ export class WindowsStrategy implements PlatformStrategy {
 
     /**
      * 判断命令行是否属于 Antigravity 进程
-     * 精准匹配：必须包含 --app_data_dir antigravity 参数
+     * 精准匹配：必须同时满足以下条件：
+     * 1. 必须有 --extension_server_port 参数
+     * 2. 必须有 --csrf_token 参数
+     * 3. 必须有 --app_data_dir antigravity 参数
      */
     private isAntigravityProcess(commandLine: string): boolean {
-        const lowerCmd = commandLine.toLowerCase();
-        
-        // 必须包含 csrf_token（基本标识）
-        if (!commandLine.includes('csrf_token')) {
+        // 条件1：必须包含 --extension_server_port 参数
+        if (!commandLine.includes('--extension_server_port')) {
             return false;
         }
-        
-        // 精准特征：--app_data_dir antigravity
-        if (/--app_data_dir\s+antigravity\b/i.test(commandLine)) {
-            return true;
+
+        // 条件2：必须包含 --csrf_token 参数
+        if (!commandLine.includes('--csrf_token')) {
+            return false;
         }
-        
-        // 路径特征：包含 \antigravity\ 或 /antigravity/
-        if (lowerCmd.includes('\\antigravity\\') || lowerCmd.includes('/antigravity/')) {
-            return true;
-        }
-        
-        return false;
+
+        // 条件3：必须有 --app_data_dir antigravity 参数（最可靠的标识）
+        return /--app_data_dir\s+antigravity\b/i.test(commandLine);
     }
 
     /**
@@ -94,7 +91,7 @@ export class WindowsStrategy implements PlatformStrategy {
                     }
 
                     const pid = item.ProcessId;
-                    if (!pid) {continue;}
+                    if (!pid) { continue; }
 
                     const portMatch = commandLine.match(/--extension_server_port[=\s]+(\d+)/);
                     const tokenMatch = commandLine.match(/--csrf_token[=\s]+([a-f0-9-]+)/i);
@@ -106,12 +103,12 @@ export class WindowsStrategy implements PlatformStrategy {
 
                     const extensionPort = portMatch?.[1] ? parseInt(portMatch[1], 10) : 0;
                     const csrfToken = tokenMatch[1];
-                    
+
                     candidates.push({ pid, extensionPort, csrfToken });
                 }
 
                 logger.info(`[WindowsStrategy] Found ${totalCount} language_server processes, ${candidates.length} belong to Antigravity`);
-                
+
                 if (candidates.length === 0) {
                     logger.warn('[WindowsStrategy] No valid Antigravity process found');
                     return [];
@@ -245,7 +242,7 @@ export class UnixStrategy implements PlatformStrategy {
         const execAsync = promisify(exec);
 
         const commands = ['lsof', 'ss', 'netstat'] as const;
-        
+
         for (const cmd of commands) {
             try {
                 await execAsync(`which ${cmd}`, { timeout: 3000 });
@@ -262,18 +259,24 @@ export class UnixStrategy implements PlatformStrategy {
 
     /**
      * 判断命令行是否属于 Antigravity 进程
+     * 精准匹配：必须同时满足以下条件：
+     * 1. 必须有 --extension_server_port 参数
+     * 2. 必须有 --csrf_token 参数
+     * 3. 必须有 --app_data_dir antigravity 参数
      */
     private isAntigravityProcess(commandLine: string): boolean {
-        const lowerCmd = commandLine.toLowerCase();
-        // 检查 --app_data_dir antigravity 参数
-        if (/--app_data_dir\s+antigravity\b/i.test(commandLine)) {
-            return true;
+        // 条件1：必须包含 --extension_server_port 参数
+        if (!commandLine.includes('--extension_server_port')) {
+            return false;
         }
-        // 检查路径中是否包含 antigravity
-        if (lowerCmd.includes('/antigravity/') || lowerCmd.includes('\\antigravity\\')) {
-            return true;
+
+        // 条件2：必须包含 --csrf_token 参数
+        if (!commandLine.includes('--csrf_token')) {
+            return false;
         }
-        return false;
+
+        // 条件3：必须有 --app_data_dir antigravity 参数（最可靠的标识）
+        return /--app_data_dir\s+antigravity\b/i.test(commandLine);
     }
 
     getProcessListCommand(processName: string): string {
@@ -328,8 +331,8 @@ export class UnixStrategy implements PlatformStrategy {
         // Unix 平台排序策略：当前进程的子进程 > 其他进程
         // 为了提高成功率，我们将子进程排在第一位，但返回所有候选进程
         return candidates.sort((a, b) => {
-            if (a.ppid === currentPid) {return -1;}
-            if (b.ppid === currentPid) {return 1;}
+            if (a.ppid === currentPid) { return -1; }
+            if (b.ppid === currentPid) { return 1; }
             return 0;
         });
     }

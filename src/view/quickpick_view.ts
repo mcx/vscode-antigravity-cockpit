@@ -5,7 +5,7 @@
  */
 
 import * as vscode from 'vscode';
-import { QuotaSnapshot, QuotaGroup } from '../shared/types';
+import { QuotaSnapshot } from '../shared/types';
 import { configService } from '../shared/config_service';
 import { logger } from '../shared/log_service';
 import { t } from '../shared/i18n';
@@ -115,7 +115,7 @@ export class QuickPickView {
         });
 
         pick.onDidAccept(async () => {
-            if (!currentActiveItem) return;
+            if (!currentActiveItem) {return;}
 
             // 处理模型置顶切换
             if (currentActiveItem.modelId) {
@@ -150,7 +150,7 @@ export class QuickPickView {
             const item = event.item as QuotaQuickPickItem;
             const button = event.button as IdentifiableButton;
             
-            if (!item.modelId) return;
+            if (!item.modelId) {return;}
 
             if (button.id === BUTTON_ID.RENAME) {
                 await this.handleRename(pick, item.modelId, item.originalLabel || '', false);
@@ -194,7 +194,7 @@ export class QuickPickView {
         });
 
         pick.onDidAccept(async () => {
-            if (!currentActiveItem) return;
+            if (!currentActiveItem) {return;}
 
             // 处理分组置顶切换
             if (currentActiveItem.groupId) {
@@ -227,7 +227,7 @@ export class QuickPickView {
             const item = event.item as QuotaQuickPickItem;
             const button = event.button as IdentifiableButton;
             
-            if (!item.groupId || !item.groupModelIds) return;
+            if (!item.groupId || !item.groupModelIds) {return;}
 
             if (button.id === BUTTON_ID.RENAME) {
                 await this.handleGroupRename(pick, item.groupModelIds, item.originalLabel || '');
@@ -289,8 +289,8 @@ export class QuickPickView {
                         day: '2-digit', 
                         hour: '2-digit', 
                         minute: '2-digit',
-                        hour12: false 
-                      })
+                        hour12: false, 
+                    })
                     : '-';
                 const countdown = model.timeUntilResetFormatted || '-';
 
@@ -350,7 +350,7 @@ export class QuickPickView {
                 
                 // 组内模型名称列表
                 const modelNames = group.models.map(m => 
-                    config.modelCustomNames?.[m.modelId] || m.label
+                    config.modelCustomNames?.[m.modelId] || m.label,
                 ).join(', ');
 
                 // 计算具体重置时间（使用分组中第一个模型的重置时间）
@@ -362,8 +362,8 @@ export class QuickPickView {
                         day: '2-digit', 
                         hour: '2-digit', 
                         minute: '2-digit',
-                        hour12: false 
-                      })
+                        hour12: false, 
+                    })
                     : '-';
                 const countdown = group.timeUntilResetFormatted || firstModel?.timeUntilResetFormatted || '-';
 
@@ -394,7 +394,7 @@ export class QuickPickView {
         pick: vscode.QuickPick<QuotaQuickPickItem>,
         modelId: string,
         originalLabel: string,
-        isGroup: boolean,
+        _isGroup: boolean,
     ): Promise<void> {
         const config = configService.getConfig();
         const currentName = config.modelCustomNames?.[modelId] || originalLabel;
@@ -424,7 +424,7 @@ export class QuickPickView {
         pick: vscode.QuickPick<QuotaQuickPickItem>,
         modelId: string,
         originalLabel: string,
-        isGroup: boolean,
+        _isGroup: boolean,
     ): Promise<void> {
         await configService.updateModelName(modelId, '');
         vscode.window.showInformationMessage(t('model.renamed', { name: originalLabel }));
@@ -514,7 +514,7 @@ export class QuickPickView {
                 
                 if (remaining > 0) {
                     vscode.window.showWarningMessage(
-                        t('quickpick.refreshCooldown', { seconds: remaining }) || `请等待 ${remaining} 秒后再刷新`
+                        t('quickpick.refreshCooldown', { seconds: remaining }) || `请等待 ${remaining} 秒后再刷新`,
                     );
                     await this.show();
                     return;

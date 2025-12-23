@@ -11,7 +11,6 @@ import { configService, CockpitConfig } from './shared/config_service';
 import { t } from './shared/i18n';
 import { CockpitHUD } from './view/hud';
 import { QuickPickView } from './view/quickpick_view';
-import { DISPLAY_MODE } from './shared/constants';
 
 // Controllers
 import { StatusBarController } from './controller/status_bar_controller';
@@ -27,9 +26,9 @@ let quickPickView: QuickPickView;
 
 // Controllers
 let statusBar: StatusBarController;
-let commandController: CommandController;
-let messageController: MessageController;
-let telemetryController: TelemetryController;
+let _commandController: CommandController;
+let _messageController: MessageController;
+let _telemetryController: TelemetryController;
 
 let systemOnline = false;
 
@@ -46,7 +45,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     logger.init();
 
     // 获取插件版本号
-    const packageJson = require('../package.json');
+    const packageJson = await import('../package.json');
     const version = packageJson.version || 'unknown';
 
     logger.info(`Antigravity Cockpit v${version} - Systems Online`);
@@ -72,9 +71,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     };
 
     // 初始化其他控制器
-    telemetryController = new TelemetryController(reactor, statusBar, hud, quickPickView, onRetry);
-    messageController = new MessageController(hud, reactor, onRetry);
-    commandController = new CommandController(context, hud, quickPickView, reactor, onRetry);
+    _telemetryController = new TelemetryController(reactor, statusBar, hud, quickPickView, onRetry);
+    _messageController = new MessageController(hud, reactor, onRetry);
+    _commandController = new CommandController(context, hud, quickPickView, reactor, onRetry);
 
     // 监听配置变化
     context.subscriptions.push(

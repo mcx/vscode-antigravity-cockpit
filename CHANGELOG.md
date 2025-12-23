@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.5.23] - 2025-12-23
+
+### Improved
+- **Detection**: Refined Antigravity process detection by requiring server port + CSRF token and removing path-based matching to avoid false positives.
+- **Optimization**: Reduced VSIX package size by ~67% via `.vscodeignore` (excluded `src`, source maps, and demo assets).
+- **Engineering**: Resolved all lint issues and updated TS config to support modern ESM imports.
+
+### Fixed
+- **Status Bar**: Corrected status bar tooltip to display user tier name instead of internal ID.
+
 ## [1.5.22] - 2025-12-22
 
 ### Fixed

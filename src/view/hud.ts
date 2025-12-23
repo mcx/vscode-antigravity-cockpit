@@ -264,9 +264,9 @@ export class CockpitHUD {
      */
     private generateHtml(webview: vscode.Webview): string {
         // 获取外部资源 URI
-        const styleUri = this.getWebviewUri(webview, 'src', 'view', 'webview', 'dashboard.css');
-        const listStyleUri = this.getWebviewUri(webview, 'src', 'view', 'webview', 'list_view.css');
-        const scriptUri = this.getWebviewUri(webview, 'src', 'view', 'webview', 'dashboard.js');
+        const styleUri = this.getWebviewUri(webview, 'out', 'view', 'webview', 'dashboard.css');
+        const listStyleUri = this.getWebviewUri(webview, 'out', 'view', 'webview', 'list_view.css');
+        const scriptUri = this.getWebviewUri(webview, 'out', 'view', 'webview', 'dashboard.js');
 
         // 获取国际化文本
         const translations = i18n.getAllTranslations();

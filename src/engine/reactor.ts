@@ -322,7 +322,7 @@ export class ReactorCore {
         // 验证响应数据结构
         if (!data || !data.userStatus) {
             throw new Error(t('error.invalidResponse', { 
-                details: data ? JSON.stringify(data).substring(0, 100) : 'empty response' 
+                details: data ? JSON.stringify(data).substring(0, 100) : 'empty response', 
             }));
         }
         
@@ -655,8 +655,8 @@ export class ReactorCore {
                 'MODEL_CLAUDE_4_5_SONNET',
                 'MODEL_CLAUDE_4_5_SONNET_THINKING',
                 'MODEL_PLACEHOLDER_M12', // Claude Opus 4.5 Thinking
-                'MODEL_OPENAI_GPT_OSS_120B_MEDIUM'
-            ]
+                'MODEL_OPENAI_GPT_OSS_120B_MEDIUM',
+            ],
         };
 
         for (const model of models) {

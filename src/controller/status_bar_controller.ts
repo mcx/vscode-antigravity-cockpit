@@ -198,8 +198,8 @@ export class StatusBarController {
         md.isTrusted = true;
         md.supportHtml = true;
 
-        // 标题行
-        const planInfo = snapshot.userInfo?.planName ? ` | ${snapshot.userInfo.planName}` : '';
+        // 标题行（使用 tier 显示 userTier.name，与计划详情卡片保持一致）
+        const planInfo = snapshot.userInfo?.tier ? ` | ${snapshot.userInfo.tier}` : '';
         md.appendMarkdown(`**🚀 ${t('dashboard.title')}${planInfo}**\n\n`);
 
         // 排序逻辑与仪表盘保持一致

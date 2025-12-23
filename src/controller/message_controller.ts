@@ -14,7 +14,7 @@ export class MessageController {
     constructor(
         private hud: CockpitHUD,
         private reactor: ReactorCore,
-        private onRetry: () => Promise<void>
+        private onRetry: () => Promise<void>,
     ) {
         this.setupMessageHandling();
     }
