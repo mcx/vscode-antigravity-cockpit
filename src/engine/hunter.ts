@@ -76,8 +76,6 @@ export class ProcessHunter {
      */
     private async scanByProcessName(maxAttempts: number): Promise<EnvironmentScanResult | null> {
         let powershellTimeoutRetried = false; // 追踪 PowerShell 超时是否已重试过
-        let strategySwitchCount = 0; // 追踪 PowerShell/WMIC 切换次数，防止无限循环
-        const MAX_STRATEGY_SWITCHES = 2; // 最多切换 2 次（PowerShell → WMIC → PowerShell）
 
         for (let i = 0; i < maxAttempts; i++) {
             logger.debug(`Attempt ${i + 1}/${maxAttempts} (by process name)...`);
@@ -126,8 +124,6 @@ export class ProcessHunter {
 
                 // Windows 特定处理
                 if (process.platform === 'win32' && this.strategy instanceof WindowsStrategy) {
-                    const winStrategy = this.strategy as WindowsStrategy;
-                    const currentlyUsingPowershell = winStrategy.isUsingPowershell();
                     
                     // 检测 PowerShell 执行策略问题
                     if (errorMsg.includes('cannot be loaded because running scripts is disabled') ||
@@ -136,7 +132,7 @@ export class ProcessHunter {
                         logger.error('⚠️ PowerShell execution policy may be blocking scripts. Try running: Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned');
                     }
                     
-                    // 检测 WMI 服务问题
+                    // 检测 WMI 服务问题（仍保留提示，因为 Get-CimInstance 依赖 WMI 服务）
                     if (errorMsg.includes('rpc server') || 
                         errorMsg.includes('wmi') ||
                         errorMsg.includes('invalid class') ||
@@ -144,41 +140,16 @@ export class ProcessHunter {
                         logger.error('⚠️ WMI service may not be running. Try: net start winmgmt');
                     }
 
-                    // 策略切换逻辑（防止无限循环）
-                    if (strategySwitchCount < MAX_STRATEGY_SWITCHES) {
-                        // 检测需要切换策略的错误
-                        const needsSwitch = 
-                            errorMsg.includes('not recognized') ||
-                            errorMsg.includes('not found') ||
-                            errorMsg.includes('不是内部或外部命令') ||
-                            errorMsg.includes('无法识别') ||
-                            errorMsg.includes('cmdlet') ||
-                            errorMsg.includes('get-ciminstance') ||
-                            errorMsg.includes('exception') ||
-                            errorMsg.includes('异常');
-                        
-                        if (needsSwitch) {
-                            const newStrategy = !currentlyUsingPowershell;
-                            logger.warn(`${currentlyUsingPowershell ? 'PowerShell' : 'WMIC'} command failed, switching to ${newStrategy ? 'PowerShell' : 'WMIC'}...`);
-                            winStrategy.setUsePowershell(newStrategy);
-                            strategySwitchCount++;
-                            // 不消耗重试次数，立即重试
-                            i--;
-                            continue;
-                        }
-                    }
-
                     // PowerShell 超时特殊处理：首次超时不消耗重试次数
-                    if (currentlyUsingPowershell &&
-                        !powershellTimeoutRetried &&
+                    if (!powershellTimeoutRetried &&
                         (errorMsg.includes('timeout') ||
                          errorMsg.includes('timed out') ||
                          errorMsg.includes('超时'))) {
                         logger.warn('PowerShell command timed out (likely cold start), retrying with longer wait...');
                         powershellTimeoutRetried = true;
-                        // 不消耗重试次数，给 PowerShell 预热时间后重试
+                        // 不消耗重试次数，给 PowerShell 更多预热时间后重试
                         i--;
-                        await new Promise(r => setTimeout(r, 2000)); // 等待 2 秒让 PowerShell 预热
+                        await new Promise(r => setTimeout(r, 3000)); // 增加到 3 秒让 PowerShell 预热
                         continue;
                     }
                 }
@@ -196,15 +167,13 @@ export class ProcessHunter {
      * 按关键字扫描（查找包含 csrf_token 的进程）
      */
     private async scanByKeyword(): Promise<EnvironmentScanResult | null> {
-        // 仅 Windows PowerShell 支持按关键字查找
+        // 仅 Windows 支持按关键字查找
         if (process.platform !== 'win32' || !(this.strategy instanceof WindowsStrategy)) {
             return null;
         }
 
         const winStrategy = this.strategy as WindowsStrategy;
-        if (!winStrategy.isUsingPowershell()) {
-            return null;
-        }
+        // 注意：WindowsStrategy 现已纯化为仅使用 PowerShell，无需检查 isUsingPowershell
 
         try {
             const cmd = winStrategy.getProcessByKeywordCommand();

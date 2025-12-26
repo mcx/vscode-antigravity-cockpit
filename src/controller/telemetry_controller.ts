@@ -8,11 +8,12 @@ import { configService, CockpitConfig } from '../shared/config_service';
 import { logger } from '../shared/log_service';
 import { t } from '../shared/i18n';
 import { QuotaSnapshot } from '../shared/types';
-import { QUOTA_THRESHOLDS } from '../shared/constants';
+import { QUOTA_THRESHOLDS, TIMING } from '../shared/constants';
 
 export class TelemetryController {
     private notifiedModels: Set<string> = new Set();
     private lastSuccessfulUpdate: Date | null = null;
+    private consecutiveFailures: number = 0;
 
     constructor(
         private reactor: ReactorCore,
@@ -34,6 +35,7 @@ export class TelemetryController {
 
             // 记录最后成功更新时间
             this.lastSuccessfulUpdate = new Date();
+            this.consecutiveFailures = 0; // 重置连续失败计数
 
             // 成功获取数据，重置错误状态
             this.statusBar.reset();
@@ -101,11 +103,21 @@ export class TelemetryController {
             if (err.message.includes('ECONNREFUSED') || 
                 err.message.includes('Signal Lost') || 
                 err.message.includes('Signal Corrupted')) {
-                logger.warn('Connection issue detected, initiating immediate re-scan protocol...');
-                // 立即尝试重新启动系统（重新扫描端口）
-                await this.onRetry();
-                return;
+                
+                // 增加连续失败计数
+                this.consecutiveFailures++;
+                
+                // 如果连续失败次数没超过阈值，尝试自动重连
+                if (this.consecutiveFailures <= TIMING.MAX_CONSECUTIVE_RETRY) {
+                    logger.warn(`Connection issue detected (attempt ${this.consecutiveFailures}/${TIMING.MAX_CONSECUTIVE_RETRY}), initiating immediate re-scan protocol...`);
+                    // 立即尝试重新启动系统（重新扫描端口）
+                    await this.onRetry();
+                    return;
+                } else {
+                    logger.error(`Connection failed after ${this.consecutiveFailures} consecutive attempts. Stopping auto-retry.`);
+                }
             }
+
 
             this.statusBar.setError(err.message);
 

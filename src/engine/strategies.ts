@@ -10,16 +10,6 @@ import { PlatformStrategy, ProcessInfo } from '../shared/types';
  * Windows 平台策略
  */
 export class WindowsStrategy implements PlatformStrategy {
-    private usePowershell: boolean = true;
-
-    setUsePowershell(use: boolean): void {
-        this.usePowershell = use;
-    }
-
-    isUsingPowershell(): boolean {
-        return this.usePowershell;
-    }
-
     /**
      * 判断命令行是否属于 Antigravity 进程
      * 精准匹配：必须同时满足以下条件：
@@ -44,13 +34,13 @@ export class WindowsStrategy implements PlatformStrategy {
 
     /**
      * 按进程名获取进程列表命令
+     * 仅使用 PowerShell
      */
     getProcessListCommand(processName: string): string {
-        if (this.usePowershell) {
-            // 使用单引号包裹 Filter 参数，内部 name 值使用双单引号转义
-            return `powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter 'name=''${processName}''' | Select-Object ProcessId,CommandLine | ConvertTo-Json"`;
-        }
-        return `wmic process where "name='${processName}'" get ProcessId,CommandLine /format:list`;
+        const utf8Header = '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; ';
+        // 使用单引号包裹 Filter 参数，内部 name 值使用双单引号转义
+        // chcp 65001 >nul 确保 CMD 环境以 UTF-8 运行，避免乱码
+        return `chcp 65001 >nul && powershell -NoProfile -Command "${utf8Header}Get-CimInstance Win32_Process -Filter 'name=''${processName}''' | Select-Object ProcessId,CommandLine | ConvertTo-Json"`;
     }
 
     /**
@@ -58,115 +48,83 @@ export class WindowsStrategy implements PlatformStrategy {
      * 这是备用方案，当按进程名查找失败时使用
      */
     getProcessByKeywordCommand(): string {
-        if (this.usePowershell) {
-            // 查找所有 CommandLine 包含 csrf_token 的进程
-            return 'powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match \'csrf_token\' } | Select-Object ProcessId,Name,CommandLine | ConvertTo-Json"';
-        }
-        // WMIC 不支持按 CommandLine 筛选，返回所有进程
-        return 'wmic process get ProcessId,Name,CommandLine /format:list';
+        const utf8Header = '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; ';
+        // chcp 65001 >nul 确保 CMD 环境以 UTF-8 运行
+        return `chcp 65001 >nul && powershell -NoProfile -Command "${utf8Header}Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'csrf_token' } | Select-Object ProcessId,Name,CommandLine | ConvertTo-Json"`;
     }
 
     parseProcessInfo(stdout: string): ProcessInfo[] {
-        logger.debug('[WindowsStrategy] Parsing process info...');
+        logger.debug('[WindowsStrategy] Parsing JSON process info...');
 
-        if (this.usePowershell || stdout.trim().startsWith('{') || stdout.trim().startsWith('[')) {
-            try {
-                let data = JSON.parse(stdout.trim());
-                if (!Array.isArray(data)) {
-                    data = [data];
-                }
+        try {
+            // 清理可能存在的非 JSON 杂质（虽然 chcp 65001 应该能解决大部分，但防御性编程）
+            const jsonStart = stdout.indexOf('[');
+            const jsonObjectStart = stdout.indexOf('{');
+            let cleanStdout = stdout;
 
-                if (data.length === 0) {
-                    logger.debug('[WindowsStrategy] JSON array is empty');
-                    return [];
-                }
+            if (jsonStart >= 0 || jsonObjectStart >= 0) {
+                 // 找到最早的 JSON 开始符号
+                 const start = (jsonStart >= 0 && jsonObjectStart >= 0) 
+                    ? Math.min(jsonStart, jsonObjectStart) 
+                    : Math.max(jsonStart, jsonObjectStart);
+                 cleanStdout = stdout.substring(start);
+            }
 
-                const totalCount = data.length;
-                const candidates: ProcessInfo[] = [];
+            let data = JSON.parse(cleanStdout.trim());
+            if (!Array.isArray(data)) {
+                data = [data];
+            }
 
-                for (const item of data) {
-                    const commandLine = item.CommandLine || '';
-                    if (!commandLine || !this.isAntigravityProcess(commandLine)) {
-                        continue;
-                    }
-
-                    const pid = item.ProcessId;
-                    if (!pid) { continue; }
-
-                    const portMatch = commandLine.match(/--extension_server_port[=\s]+(\d+)/);
-                    const tokenMatch = commandLine.match(/--csrf_token[=\s]+([a-f0-9-]+)/i);
-
-                    if (!tokenMatch?.[1]) {
-                        logger.warn(`[WindowsStrategy] Cannot extract CSRF Token from PID ${pid}`);
-                        continue;
-                    }
-
-                    const extensionPort = portMatch?.[1] ? parseInt(portMatch[1], 10) : 0;
-                    const csrfToken = tokenMatch[1];
-
-                    candidates.push({ pid, extensionPort, csrfToken });
-                }
-
-                logger.info(`[WindowsStrategy] Found ${totalCount} language_server processes, ${candidates.length} belong to Antigravity`);
-
-                if (candidates.length === 0) {
-                    logger.warn('[WindowsStrategy] No valid Antigravity process found');
-                    return [];
-                }
-
-                return candidates;
-            } catch (e) {
-                const error = e instanceof Error ? e : new Error(String(e));
-                logger.debug(`[WindowsStrategy] JSON parse failed: ${error.message}`);
+            if (data.length === 0) {
+                logger.debug('[WindowsStrategy] JSON array is empty');
                 return [];
             }
-        }
 
-        // WMIC format parsing
-        logger.debug('[WindowsStrategy] Trying WMIC format parsing...');
-        const blocks = stdout.split(/\n\s*\n/).filter(block => block.trim().length > 0);
+            const totalCount = data.length;
+            const candidates: ProcessInfo[] = [];
 
-        const candidates: ProcessInfo[] = [];
+            for (const item of data) {
+                 const commandLine = item.CommandLine || '';
+                 if (!commandLine || !this.isAntigravityProcess(commandLine)) {
+                     continue;
+                 }
 
-        for (const block of blocks) {
-            const pidMatch = block.match(/ProcessId=(\d+)/);
-            const commandLineMatch = block.match(/CommandLine=(.+)/);
+                 const pid = item.ProcessId;
+                 if (!pid) { continue; }
 
-            if (!pidMatch || !commandLineMatch) {
-                continue;
+                 const portMatch = commandLine.match(/--extension_server_port[=\s]+(\d+)/);
+                 const tokenMatch = commandLine.match(/--csrf_token[=\s]+([a-f0-9-]+)/i);
+
+                 if (!tokenMatch?.[1]) {
+                     logger.warn(`[WindowsStrategy] Cannot extract CSRF Token from PID ${pid}`);
+                     continue;
+                 }
+
+                 const extensionPort = portMatch?.[1] ? parseInt(portMatch[1], 10) : 0;
+                 const csrfToken = tokenMatch[1];
+
+                 candidates.push({ pid, extensionPort, csrfToken });
             }
 
-            const commandLine = commandLineMatch[1].trim();
+            logger.info(`[WindowsStrategy] Found ${totalCount} language_server processes, ${candidates.length} belong to Antigravity`);
 
-            if (!this.isAntigravityProcess(commandLine)) {
-                continue;
+            if (candidates.length === 0) {
+                logger.warn('[WindowsStrategy] No valid Antigravity process found');
+                return [];
             }
 
-            const portMatch = commandLine.match(/--extension_server_port[=\s]+(\d+)/);
-            const tokenMatch = commandLine.match(/--csrf_token[=\s]+([a-f0-9-]+)/i);
-
-            if (!tokenMatch?.[1]) {
-                continue;
-            }
-
-            const pid = parseInt(pidMatch[1], 10);
-            const extensionPort = portMatch?.[1] ? parseInt(portMatch[1], 10) : 0;
-            const csrfToken = tokenMatch[1];
-
-            candidates.push({ pid, extensionPort, csrfToken });
-        }
-
-        if (candidates.length === 0) {
-            logger.warn('[WindowsStrategy] WMIC: No Antigravity process found');
+            return candidates;
+        } catch (e) {
+            const error = e instanceof Error ? e : new Error(String(e));
+            // Log stdout preview for diagnosis
+            const stdoutPreview = stdout.length > 200 ? stdout.substring(0, 200) + '...' : stdout;
+            logger.debug(`[WindowsStrategy] JSON parse failed: ${error.message}. Output preview: ${stdoutPreview}`);
             return [];
         }
-
-        logger.info(`[WindowsStrategy] WMIC: Found ${candidates.length} Antigravity candidates`);
-        return candidates;
     }
 
     getPortListCommand(pid: number): string {
-        return `netstat -ano | findstr "${pid}" | findstr "LISTENING"`;
+        return `chcp 65001 >nul && netstat -ano | findstr "${pid}" | findstr "LISTENING"`;
     }
 
     parseListeningPorts(stdout: string): number[] {
@@ -188,25 +146,18 @@ export class WindowsStrategy implements PlatformStrategy {
     getErrorMessages(): { processNotFound: string; commandNotAvailable: string; requirements: string[] } {
         return {
             processNotFound: 'language_server process not found',
-            commandNotAvailable: this.usePowershell
-                ? 'PowerShell command failed; please check system permissions'
-                : 'wmic/PowerShell command unavailable; please check the system environment',
+            commandNotAvailable: 'PowerShell command failed; please check system permissions',
             requirements: [
                 'Antigravity is running',
                 'language_server_windows_x64.exe process is running',
-                this.usePowershell
-                    ? 'The system has permission to run PowerShell and netstat commands'
-                    : 'The system has permission to run wmic/PowerShell and netstat commands (auto-fallback supported)',
+                'The system has permission to run PowerShell and netstat commands',
             ],
         };
     }
 
     getDiagnosticCommand(): string {
-        // 列出所有包含 'language' 或 'antigravity' 的进程
-        if (this.usePowershell) {
-            return 'powershell -NoProfile -Command "Get-Process | Where-Object { $_.ProcessName -match \'language|antigravity\' } | Select-Object Id,ProcessName,Path | Format-Table -AutoSize"';
-        }
-        return 'wmic process where "name like \'%language%\' or name like \'%antigravity%\'" get ProcessId,Name,CommandLine /format:list';
+        const utf8Header = '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; ';
+        return `chcp 65001 >nul && powershell -NoProfile -Command "${utf8Header}Get-Process | Where-Object { $_.ProcessName -match 'language|antigravity' } | Select-Object Id,ProcessName,Path | Format-Table -AutoSize"`;
     }
 }
 

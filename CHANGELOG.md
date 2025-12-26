@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.5.36]
+
+### Improved
+- **Windows Process Detection**: Refactored detection logic to exclusively use PowerShell with robust UTF-8 encoding enforcement. This resolves garbled error messages on non-English systems and eliminates reliance on the deprecated `wmic` tool.
+- **Connection Stability**: Increased PowerShell connection timeout from 8s to 15s to better accommodate environments with long cold start times.
+
 ## [1.5.35]
 
 - Fix: Resolved 'Unexpected end of JSON input' startup error with auto-recovery logic
