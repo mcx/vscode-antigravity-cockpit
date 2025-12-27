@@ -211,6 +211,10 @@ export interface UserStatus {
 /** 服务端用户状态响应 */
 export interface ServerUserStatusResponse {
     userStatus: UserStatus;
+    /** 服务端返回的错误消息 */
+    message?: string;
+    /** 服务端返回的错误代码 */
+    code?: string;
 }
 
 // ============ 进程检测类型 ============
@@ -223,6 +227,24 @@ export interface EnvironmentScanResult {
     connectPort: number;
     /** CSRF Token */
     csrfToken: string;
+}
+
+/** 扫描诊断信息 */
+export interface ScanDiagnostics {
+    /** 扫描方式 */
+    scan_method: 'process_name' | 'keyword' | 'unknown';
+    /** 目标进程名 */
+    target_process: string;
+    /** 扫描尝试次数 */
+    attempts: number;
+    /** 候选进程数量 */
+    found_candidates: number;
+    /** 候选端口列表 */
+    ports?: number[];
+    /** 通过验证的端口 */
+    verified_port?: number | null;
+    /** 是否验证成功 */
+    verification_success?: boolean;
 }
 
 /** 进程信息 */

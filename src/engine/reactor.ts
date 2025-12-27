@@ -11,6 +11,7 @@ import {
     ServerUserStatusResponse,
     ClientModelConfig,
     QuotaGroup,
+    ScanDiagnostics,
 } from '../shared/types';
 import { logger } from '../shared/log_service';
 import { configService } from '../shared/config_service';
@@ -30,6 +31,7 @@ export class ReactorCore {
     private errorHandler?: (error: Error) => void;
     private pulseTimer?: ReturnType<typeof setInterval>;
     public currentInterval: number = 0;
+    private lastScanDiagnostics?: ScanDiagnostics;
     
     /** 上一次的配额快照缓存 */
     private lastSnapshot?: QuotaSnapshot;
@@ -43,9 +45,10 @@ export class ReactorCore {
     /**
      * 启动反应堆，设置连接参数
      */
-    engage(port: number, token: string): void {
+    engage(port: number, token: string, diagnostics?: ScanDiagnostics): void {
         this.port = port;
         this.token = token;
+        this.lastScanDiagnostics = diagnostics;
         logger.info(`Reactor Engaged: :${port}`);
     }
 
@@ -178,6 +181,18 @@ export class ReactorCore {
             
             // 超过最大重试次数，触发错误回调
             logger.error(`Init sync failed after ${maxRetries} retries: ${err.message}`);
+            captureError(err, {
+                phase: 'initSync',
+                retryCount: currentRetry,
+                maxRetries,
+                endpoint: API_ENDPOINTS.GET_USER_STATUS,
+                host: '127.0.0.1',
+                port: this.port,
+                timeout_ms: TIMING.HTTP_TIMEOUT_MS,
+                interval_ms: this.currentInterval,
+                has_token: Boolean(this.token),
+                scan: this.lastScanDiagnostics,
+            });
             if (this.errorHandler) {
                 this.errorHandler(err);
             }
@@ -210,7 +225,16 @@ export class ReactorCore {
         } catch (error) {
             const err = error instanceof Error ? error : new Error(String(error));
             logger.error(`Telemetry Sync Failed: ${err.message}`);
-            captureError(err, { phase: 'telemetrySync' });
+            captureError(err, {
+                phase: 'telemetrySync',
+                endpoint: API_ENDPOINTS.GET_USER_STATUS,
+                host: '127.0.0.1',
+                port: this.port,
+                timeout_ms: TIMING.HTTP_TIMEOUT_MS,
+                interval_ms: this.currentInterval,
+                has_token: Boolean(this.token),
+                scan: this.lastScanDiagnostics,
+            });
             if (this.errorHandler) {
                 this.errorHandler(err);
             }
@@ -283,6 +307,11 @@ export class ReactorCore {
     private decodeSignal(data: ServerUserStatusResponse): QuotaSnapshot {
         // 验证响应数据结构
         if (!data || !data.userStatus) {
+            // 如果服务端返回了错误消息，直接透传给用户，这不属于插件 Bug
+            if (data && typeof data.message === 'string') {
+                throw new Error(t('error.serverError', { message: data.message }));
+            }
+
             throw new Error(t('error.invalidResponse', { 
                 details: data ? JSON.stringify(data).substring(0, 100) : 'empty response', 
             }));

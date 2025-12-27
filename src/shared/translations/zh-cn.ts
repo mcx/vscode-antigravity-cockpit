@@ -166,6 +166,7 @@ export const zhCN = {
 
     // Error messages
     'error.invalidResponse': '服务器响应无效: {details}',
+    'error.serverError': 'Antigravity 错误: {message}',
 
     // QuickPick mode
     'quickpick.placeholder': '点击模型固定状态栏 | 右上角操作：刷新、分组、日志、设置、切换 Webview',

@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.5.38]
+
+### Improved
+- **Error Reporting**: Added anonymous user/session identifiers and editor metadata to better separate user environments
+- **Diagnostics Context**: Included runtime limits and extension configuration snapshots in error events
+- **Tagging**: Added editor, URI scheme, and UI kind tags for quick filtering
+- **Port Scan Insight**: Attached scan method and port verification details to error context
+
 ## [1.5.37]
 
 ### Added
@@ -599,4 +607,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Smart notifications
 - English/Chinese support
 - Cross-platform support (Windows / macOS / Linux)
-

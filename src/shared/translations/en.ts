@@ -166,6 +166,7 @@ export const en = {
 
     // Error messages
     'error.invalidResponse': 'Invalid server response: {details}',
+    'error.serverError': 'Antigravity Error: {message}',
 
     // QuickPick mode
     'quickpick.placeholder': 'Click model to pin | Top-right: Refresh, Group, Logs, Settings, Webview',

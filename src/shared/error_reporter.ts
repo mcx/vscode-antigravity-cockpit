@@ -6,12 +6,15 @@
 import * as https from 'https';
 import * as vscode from 'vscode';
 import * as os from 'os';
+import { configService } from './config_service';
+import { TIMING } from './constants';
 
 // Sentry DSN - 构建时通过 esbuild define 注入
 const SENTRY_DSN = process.env.SENTRY_DSN || '';
 
 let telemetryEnabled = true;
 let extensionVersion = 'unknown';
+let verboseLogging = false;
 
 // 解析 DSN
 interface SentryConfig {
@@ -47,6 +50,7 @@ export function initErrorReporter(version: string): void {
     // 检查用户是否禁用了遥测
     const config = vscode.workspace.getConfiguration('agCockpit');
     telemetryEnabled = config.get<boolean>('telemetryEnabled', true);
+    verboseLogging = config.get<boolean>('telemetryDebug', false);
     
     // 同时尊重 VS Code 的全局遥测设置
     const vscodeConfig = vscode.workspace.getConfiguration('telemetry');
@@ -56,16 +60,22 @@ export function initErrorReporter(version: string): void {
     }
     
     if (!telemetryEnabled) {
-        console.log('[ErrorReporter] Telemetry disabled by user');
+        if (verboseLogging) {
+            console.log('[ErrorReporter] Telemetry disabled by user');
+        }
         return;
     }
 
     if (!sentryConfig) {
-        console.log('[ErrorReporter] Sentry DSN not configured');
+        if (verboseLogging) {
+            console.log('[ErrorReporter] Sentry DSN not configured');
+        }
         return;
     }
 
-    console.log('[ErrorReporter] Lightweight error reporter initialized');
+    if (verboseLogging) {
+        console.log('[ErrorReporter] Lightweight error reporter initialized');
+    }
 }
 
 /**
@@ -81,6 +91,7 @@ type ErrorCategory =
     | 'parse_error'         // 解析错误 - 插件 Bug
     | 'null_reference'      // 空引用 - 插件 Bug
     | 'process_not_found'   // 进程未找到 - 用户环境
+    | 'unauthorized'        // 未登录 - 用户行为
     | 'unknown';            // 未知
 
 /**
@@ -112,6 +123,9 @@ function classifyError(error: Error): ErrorCategory {
     }
     if (msg.includes('process') && (msg.includes('not found') || msg.includes('no matching'))) {
         return 'process_not_found';
+    }
+    if (msg.includes('not logged in') || msg.includes('unauthorized')) {
+        return 'unauthorized';
     }
     
     // 代码问题（插件 Bug）
@@ -153,11 +167,16 @@ function getProxyStatus(): { configured: boolean; type: string } {
 function buildEvent(error: Error, context?: Record<string, unknown>): object {
     const errorCategory = classifyError(error);
     const proxyStatus = getProxyStatus();
+    const user = getUserContext();
+    const appContext = getAppContext();
+    const runtimeContext = getRuntimeContext();
+    const uiKindLabel = getUiKindLabel(vscode.env.uiKind);
     
     // 判断是否可能是用户环境问题
     const likelyUserEnvIssue = [
         'network_timeout', 'connection_refused', 'dns_failure', 
-        'proxy_error', 'permission_denied', 'cmd_timeout', 'process_not_found'
+        'proxy_error', 'permission_denied', 'cmd_timeout', 'process_not_found',
+        'unauthorized'
     ].includes(errorCategory);
     
     return {
@@ -173,6 +192,11 @@ function buildEvent(error: Error, context?: Record<string, unknown>): object {
             likely_user_env: likelyUserEnvIssue ? 'yes' : 'no',
             proxy_configured: proxyStatus.configured ? 'yes' : 'no',
             os_type: os.platform(),
+            editor: vscode.env.appName,
+            uri_scheme: vscode.env.uriScheme,
+            ui_kind: uiKindLabel,
+            remote_name: vscode.env.remoteName ?? 'local',
+            ...(context && (context as { test_event?: boolean }).test_event ? { test_event: 'yes' } : {}),
         },
         // 上下文 - 详细诊断信息
         contexts: {
@@ -182,6 +206,10 @@ function buildEvent(error: Error, context?: Record<string, unknown>): object {
             },
             vscode: {
                 version: vscode.version,
+                app_name: vscode.env.appName,
+                uri_scheme: vscode.env.uriScheme,
+                ui_kind: vscode.env.uiKind,
+                remote_name: vscode.env.remoteName ?? 'local',
             },
             diagnostic: {
                 error_category: errorCategory,
@@ -190,8 +218,11 @@ function buildEvent(error: Error, context?: Record<string, unknown>): object {
                 arch: os.arch(),
                 raw_stack: error.stack,  // 原始堆栈，方便人眼阅读
             },
+            ...(appContext ? { app: appContext } : {}),
+            ...(runtimeContext ? { runtime: runtimeContext } : {}),
             ...(context ? { custom: context } : {}),
         },
+        user,
         exception: {
             values: [{
                 type: error.name,
@@ -246,6 +277,9 @@ function parseStacktrace(stack?: string): object | undefined {
  */
 function sendEvent(event: object): void {
     if (!sentryConfig) {
+        if (verboseLogging) {
+            console.log('[ErrorReporter] Skip send: Sentry DSN not configured');
+        }
         return;
     }
 
@@ -265,17 +299,26 @@ function sendEvent(event: object): void {
     };
 
     const req = https.request(options, (res) => {
-        if (res.statusCode === 200) {
+        if (verboseLogging) {
+            console.log(`[ErrorReporter] Response status: ${res.statusCode}`);
+        }
+        if (res.statusCode === 200 && verboseLogging) {
             console.log('[ErrorReporter] Event sent successfully');
         }
     });
 
-    req.on('error', () => {
+    req.on('error', (err) => {
+        if (verboseLogging) {
+            console.log(`[ErrorReporter] Send failed: ${err.message}`);
+        }
         // 静默失败，不影响主程序
     });
 
     req.on('timeout', () => {
         req.destroy();
+        if (verboseLogging) {
+            console.log('[ErrorReporter] Send timed out');
+        }
     });
 
     req.write(data);
@@ -287,11 +330,17 @@ function sendEvent(event: object): void {
  */
 export function captureError(error: Error, context?: Record<string, unknown>): void {
     if (!telemetryEnabled || !sentryConfig) {
+        if (verboseLogging) {
+            console.log('[ErrorReporter] captureError skipped (disabled or missing DSN)');
+        }
         return;
     }
 
     try {
         const event = buildEvent(error, context);
+        if (verboseLogging) {
+            console.log('[ErrorReporter] Sending error event');
+        }
         sendEvent(event);
     } catch {
         // 静默失败
@@ -303,10 +352,14 @@ export function captureError(error: Error, context?: Record<string, unknown>): v
  */
 export function captureMessage(message: string, level: 'info' | 'warning' | 'error' = 'info'): void {
     if (!telemetryEnabled || !sentryConfig) {
+        if (verboseLogging) {
+            console.log('[ErrorReporter] captureMessage skipped (disabled or missing DSN)');
+        }
         return;
     }
 
     try {
+        const user = getUserContext();
         const event = {
             event_id: generateEventId(),
             timestamp: new Date().toISOString(),
@@ -314,12 +367,102 @@ export function captureMessage(message: string, level: 'info' | 'warning' | 'err
             level,
             release: `antigravity-cockpit@${extensionVersion}`,
             message,
-            // 不收集 user 信息
+            user,
         };
+        if (verboseLogging) {
+            console.log('[ErrorReporter] Sending message event');
+        }
         sendEvent(event);
     } catch {
         // 静默失败
     }
+}
+
+/**
+ * 获取匿名用户信息（用于 Sentry Users 统计）
+ */
+function getUserContext(): { id?: string; session_id?: string } | undefined {
+    const user: { id?: string; session_id?: string } = {};
+
+    // machineId 是 VS Code 提供的匿名稳定标识
+    if (vscode.env.machineId) {
+        user.id = vscode.env.machineId;
+    }
+
+    // sessionId 是临时会话标识
+    if (vscode.env.sessionId) {
+        user.session_id = vscode.env.sessionId;
+    }
+
+    return Object.keys(user).length > 0 ? user : undefined;
+}
+
+/**
+ * 获取配置上下文（不包含敏感内容）
+ */
+function getAppContext(): {
+    refresh_interval_sec: number;
+    display_mode: string;
+    view_mode: string;
+    grouping_enabled: boolean;
+    grouping_show_in_status_bar: boolean;
+    notification_enabled: boolean;
+    show_prompt_credits: boolean;
+    status_bar_format: string;
+    data_masked: boolean;
+    warning_threshold: number;
+    critical_threshold: number;
+    log_level: string;
+} | undefined {
+    try {
+        const config = configService.getConfig();
+        return {
+            refresh_interval_sec: config.refreshInterval,
+            display_mode: config.displayMode,
+            view_mode: config.viewMode,
+            grouping_enabled: config.groupingEnabled,
+            grouping_show_in_status_bar: config.groupingShowInStatusBar,
+            notification_enabled: config.notificationEnabled,
+            show_prompt_credits: config.showPromptCredits,
+            status_bar_format: config.statusBarFormat,
+            data_masked: config.dataMasked,
+            warning_threshold: config.warningThreshold,
+            critical_threshold: config.criticalThreshold,
+            log_level: config.logLevel,
+        };
+    } catch {
+        return undefined;
+    }
+}
+
+/**
+ * 获取运行时常量上下文
+ */
+function getRuntimeContext(): {
+    http_timeout_ms: number;
+    process_cmd_timeout_ms: number;
+    process_scan_retry_ms: number;
+    max_consecutive_retry: number;
+} {
+    return {
+        http_timeout_ms: TIMING.HTTP_TIMEOUT_MS,
+        process_cmd_timeout_ms: TIMING.PROCESS_CMD_TIMEOUT_MS,
+        process_scan_retry_ms: TIMING.PROCESS_SCAN_RETRY_MS,
+        max_consecutive_retry: TIMING.MAX_CONSECUTIVE_RETRY,
+    };
+}
+
+/**
+ * 获取 UI 类型标签
+ */
+function getUiKindLabel(kind: vscode.UIKind | undefined): string {
+    if (kind === vscode.UIKind.Web) {
+        return 'web';
+    }
+    if (kind === vscode.UIKind.Desktop) {
+        return 'desktop';
+    }
+    return 'unknown';
 }
 
 /**

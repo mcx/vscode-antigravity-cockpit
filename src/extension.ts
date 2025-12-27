@@ -124,7 +124,7 @@ async function bootSystems(): Promise<void> {
         const info = await hunter.scanEnvironment(3);
 
         if (info) {
-            reactor.engage(info.connectPort, info.csrfToken);
+            reactor.engage(info.connectPort, info.csrfToken, hunter.getLastDiagnostics());
             reactor.startReactor(configService.getRefreshIntervalMs());
             systemOnline = true;
             autoRetryCount = 0; // 重置计数器
@@ -148,7 +148,14 @@ async function bootSystems(): Promise<void> {
     } catch (e) {
         const error = e instanceof Error ? e : new Error(String(e));
         logger.error('Boot Error', error);
-        captureError(error, { phase: 'boot', retryCount: autoRetryCount });
+        captureError(error, {
+            phase: 'boot',
+            retryCount: autoRetryCount,
+            maxRetries: MAX_AUTO_RETRY,
+            retryDelayMs: AUTO_RETRY_DELAY_MS,
+            refreshIntervalMs: configService.getRefreshIntervalMs(),
+            scan: hunter.getLastDiagnostics(),
+        });
 
         // 自动重试机制（异常情况也自动重试）
         if (autoRetryCount < MAX_AUTO_RETRY) {

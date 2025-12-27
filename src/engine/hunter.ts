@@ -9,7 +9,7 @@ import * as https from 'https';
 import * as process from 'process';
 import { WindowsStrategy, UnixStrategy } from './strategies';
 import { logger } from '../shared/log_service';
-import { EnvironmentScanResult, PlatformStrategy, ProcessInfo } from '../shared/types';
+import { EnvironmentScanResult, PlatformStrategy, ProcessInfo, ScanDiagnostics } from '../shared/types';
 import { TIMING, PROCESS_NAMES, API_ENDPOINTS } from '../shared/constants';
 
 const execAsync = promisify(exec);
@@ -21,6 +21,12 @@ const execAsync = promisify(exec);
 export class ProcessHunter {
     private strategy: PlatformStrategy;
     private targetProcess: string;
+    private lastDiagnostics: ScanDiagnostics = {
+        scan_method: 'unknown',
+        target_process: '',
+        attempts: 0,
+        found_candidates: 0,
+    };
 
     constructor() {
         logger.debug('Initializing ProcessHunter...');
@@ -72,10 +78,23 @@ export class ProcessHunter {
     }
 
     /**
+     * 获取最近一次扫描诊断信息
+     */
+    getLastDiagnostics(): ScanDiagnostics {
+        return { ...this.lastDiagnostics };
+    }
+
+    /**
      * 按进程名扫描
      */
     private async scanByProcessName(maxAttempts: number): Promise<EnvironmentScanResult | null> {
         let powershellTimeoutRetried = false; // 追踪 PowerShell 超时是否已重试过
+        this.lastDiagnostics = {
+            scan_method: 'process_name',
+            target_process: this.targetProcess,
+            attempts: maxAttempts,
+            found_candidates: 0,
+        };
 
         for (let i = 0; i < maxAttempts; i++) {
             logger.debug(`Attempt ${i + 1}/${maxAttempts} (by process name)...`);
@@ -103,6 +122,7 @@ export class ProcessHunter {
 
                 if (candidates && candidates.length > 0) {
                     logger.info(`Found ${candidates.length} candidate process(es)`);
+                    this.lastDiagnostics.found_candidates = candidates.length;
                     
                     // 遍历所有候选进程尝试连接
                     for (const info of candidates) {
@@ -172,6 +192,13 @@ export class ProcessHunter {
             return null;
         }
 
+        this.lastDiagnostics = {
+            scan_method: 'keyword',
+            target_process: this.targetProcess,
+            attempts: 1,
+            found_candidates: 0,
+        };
+
         const winStrategy = this.strategy as WindowsStrategy;
         // 注意：WindowsStrategy 现已纯化为仅使用 PowerShell，无需检查 isUsingPowershell
 
@@ -191,6 +218,7 @@ export class ProcessHunter {
 
             if (candidates && candidates.length > 0) {
                 logger.info(`Found ${candidates.length} keyword candidate(s)`);
+                this.lastDiagnostics.found_candidates = candidates.length;
                 
                 for (const info of candidates) {
                     logger.info(`🔍 Checking Keyword Candidate: PID=${info.pid}`);
@@ -214,9 +242,12 @@ export class ProcessHunter {
     private async verifyAndConnect(info: ProcessInfo): Promise<EnvironmentScanResult | null> {
         const ports = await this.identifyPorts(info.pid);
         logger.debug(`Listening Ports: ${ports.join(', ')}`);
+        this.lastDiagnostics.ports = ports;
 
         if (ports.length > 0) {
             const validPort = await this.verifyConnection(ports, info.csrfToken);
+            this.lastDiagnostics.verified_port = validPort ?? null;
+            this.lastDiagnostics.verification_success = Boolean(validPort);
 
             if (validPort) {
                 logger.info(`✅ Connection Logic Verified: ${validPort}`);

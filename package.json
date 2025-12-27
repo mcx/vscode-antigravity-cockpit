@@ -3,7 +3,7 @@
   "displayName": "Antigravity Cockpit",
   "icon": "assets/icon.png",
   "description": "A premium, dashboard-style quota monitor for Antigravity AI.",
-  "version": "1.5.37",
+  "version": "1.5.38",
   "publisher": "jlcodes",
   "engines": {
     "vscode": "^1.90.0"
@@ -248,6 +248,11 @@
           "default": true,
           "description": "Enable anonymous error reporting to help improve the extension. No personal data is collected.",
           "tags": ["telemetry", "usesOnlineServices"]
+        },
+        "agCockpit.telemetryDebug": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable verbose telemetry logs in the developer console. Intended for debugging only."
         }
       }
     },
