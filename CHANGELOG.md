@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.5.41]
+
+### Improved
+- **Network Timeout**: Increased HTTP request timeout from 5s to 10s for better compatibility with WSL2 and slow network environments
+
 ## [1.5.40]
 
 ### Improved

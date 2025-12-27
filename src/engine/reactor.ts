@@ -476,66 +476,55 @@ export class ReactorCore {
                     }
                 }
                 
-                // 自动拆分：检查每个分组内模型的配额是否一致
-                // 如果不一致，说明最初的自动分组可能有误，需要自动修正
-                const updatedMappings = { ...savedMappings };
-                let mappingsChanged = false;
+                // 自动分组检查：检查每个分组内模型的配额是否一致
+                // 如果不一致，说明最初的自动分组可能有误，触发一次完整的自动分组
+                let hasInconsistentGroup = false;
                 
                 for (const [groupId, groupModels] of groupMap) {
                     if (groupModels.length <= 1) {
                         continue; // 单模型组无需检查
                     }
                     
-                    // 找出每个模型的配额签名（remainingFraction + resetTime）
-                    const quotaSignatures = new Map<string, ModelQuotaInfo[]>();
-                    for (const model of groupModels) {
-                        // 使用原始配额比例 + 重置时间来生成签名（精确匹配）
+                    // 检查组内所有模型的配额签名（remainingFraction + resetTime）是否一致
+                    const firstModel = groupModels[0];
+                    const firstFraction = firstModel.remainingFraction ?? 0;
+                    const firstResetTime = firstModel.resetTime.getTime();
+                    
+                    for (let i = 1; i < groupModels.length; i++) {
+                        const model = groupModels[i];
                         const fraction = model.remainingFraction ?? 0;
-                        const resetTimeKey = model.resetTime.getTime();
-                        const signature = `${fraction}_${resetTimeKey}`;
+                        const resetTime = model.resetTime.getTime();
                         
-                        if (!quotaSignatures.has(signature)) {
-                            quotaSignatures.set(signature, []);
+                        if (fraction !== firstFraction || resetTime !== firstResetTime) {
+                            logger.info(`[AutoGroup] Group "${groupId}" has inconsistent quotas, triggering auto-group...`);
+                            hasInconsistentGroup = true;
+                            break;
                         }
-                        quotaSignatures.get(signature)!.push(model);
                     }
                     
-                    // 如果有多个不同的签名，说明组内配额不一致，需要拆分
-                    if (quotaSignatures.size > 1) {
-                        logger.info(`[AutoSplit] Group "${groupId}" has inconsistent quotas (${quotaSignatures.size} different), splitting...`);
-                        
-                        // 保留一个签名的模型在原组，其他的拆分出去
-                        let isFirst = true;
-                        for (const [signature, signatureModels] of quotaSignatures) {
-                            if (isFirst) {
-                                isFirst = false;
-                                continue; // 第一批保留在原组
-                            }
-                            
-                            // 为拆分出去的模型创建新的分组
-                            for (const model of signatureModels) {
-                                const newGroupId = model.modelId; // 使用 modelId 作为新的 groupId
-                                updatedMappings[model.modelId] = newGroupId;
-                                mappingsChanged = true;
-                                
-                                // 从原组移除，加入新组
-                                const idx = groupModels.indexOf(model);
-                                if (idx > -1) {
-                                    groupModels.splice(idx, 1);
-                                }
-                                groupMap.set(newGroupId, [model]);
-                                
-                                logger.info(`[AutoSplit] Moved "${model.label}" to new group "${newGroupId}"`);
-                            }
-                        }
+                    if (hasInconsistentGroup) {
+                        break;
                     }
                 }
                 
-                // 如果有变更，保存更新后的映射
-                if (mappingsChanged) {
-                    configService.updateGroupMappings(updatedMappings).catch(err => {
+                // 如果发现不一致，重新计算分组并更新
+                if (hasInconsistentGroup) {
+                    const newMappings = ReactorCore.calculateGroupMappings(models);
+                    configService.updateGroupMappings(newMappings).catch(err => {
                         logger.warn(`Failed to save updated groupMappings: ${err}`);
                     });
+                    
+                    // 清空并重建 groupMap
+                    groupMap.clear();
+                    for (const model of models) {
+                        const groupId = newMappings[model.modelId];
+                        if (!groupMap.has(groupId)) {
+                            groupMap.set(groupId, []);
+                        }
+                        groupMap.get(groupId)!.push(model);
+                    }
+                    
+                    logger.info(`[AutoGroup] Re-grouped ${Object.keys(newMappings).length} models`);
                 }
             } else {
                 // 没有存储的映射，每个模型单独一组

@@ -22,8 +22,8 @@ export const TIMING = {
     DEFAULT_REFRESH_INTERVAL_MS: 120000,
     /** 进程扫描重试间隔 */
     PROCESS_SCAN_RETRY_MS: 100,
-    /** HTTP 请求超时 */
-    HTTP_TIMEOUT_MS: 5000,
+    /** HTTP 请求超时（10秒，兼容 WSL2 等慢环境） */
+    HTTP_TIMEOUT_MS: 10000,
     /** 进程命令执行超时（增加到 15000ms 以兼容某些 Windows 环境下 PowerShell 的冷启动） */
     PROCESS_CMD_TIMEOUT_MS: 15000,
     /** 刷新冷却时间 (秒) */
