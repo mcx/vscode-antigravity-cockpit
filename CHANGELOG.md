@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.5.40]
+
+### Improved
+- **Auto Group Split**: Groups are now automatically split when model quotas become inconsistent during refresh
+
 ## [1.5.39]
 
 ### Improved
