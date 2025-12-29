@@ -226,4 +226,8 @@ export const de = {
     'displayMode.title': 'Anzeigemodus',
     'displayMode.webview': 'Dashboard (Webview)',
     'displayMode.quickpick': 'QuickPick-Modus',
+
+    // Footer
+    'footer.enjoyingThis': 'Gefällt es Ihnen? Geben Sie uns einen ⭐!',
+    'footer.feedback': 'Feedback',
 };

@@ -226,4 +226,8 @@ export const ja = {
     'displayMode.title': '表示モード',
     'displayMode.webview': 'ダッシュボード (Webview)',
     'displayMode.quickpick': 'QuickPickモード',
+
+    // Footer
+    'footer.enjoyingThis': 'お気に入りですか？⭐をお願いします！',
+    'footer.feedback': 'フィードバック',
 };

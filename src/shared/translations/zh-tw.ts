@@ -226,4 +226,8 @@ export const zhTW = {
     'displayMode.title': '顯示模式',
     'displayMode.webview': '儀表板 (Webview)',
     'displayMode.quickpick': '快捷模式 (QuickPick)',
+
+    // Footer
+    'footer.enjoyingThis': '覺得好用？給個 ⭐ 支持一下！',
+    'footer.feedback': '回饋',
 };

@@ -226,4 +226,8 @@ export const ko = {
     'displayMode.title': '표시 모드',
     'displayMode.webview': '대시보드 (Webview)',
     'displayMode.quickpick': 'QuickPick 모드',
+
+    // Footer
+    'footer.enjoyingThis': '마음에 드시나요? ⭐를 눌러주세요!',
+    'footer.feedback': '피드백',
 };

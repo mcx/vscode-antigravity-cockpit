@@ -226,4 +226,8 @@ export const it = {
     'displayMode.title': 'Modalità Visualizzazione',
     'displayMode.webview': 'Dashboard (Webview)',
     'displayMode.quickpick': 'Modalità QuickPick',
+
+    // Footer
+    'footer.enjoyingThis': 'Ti piace? Dacci una ⭐!',
+    'footer.feedback': 'Feedback',
 };

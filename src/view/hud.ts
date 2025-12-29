@@ -462,13 +462,13 @@ export class CockpitHUD {
 
     <footer class="dashboard-footer">
         <div class="footer-content">
-            <span class="footer-text">${i18n.getLocale() === 'zh-cn' ? '觉得好用？给个 ⭐ 支持一下！' : 'Enjoying this? Give us a ⭐!'}</span>
+            <span class="footer-text">${i18n.t('footer.enjoyingThis')}</span>
             <div class="footer-links">
                 <a href="https://github.com/jlcodes99/vscode-antigravity-cockpit" target="_blank" class="footer-link star-link">
                     ⭐ Star
                 </a>
                 <a href="https://github.com/jlcodes99/vscode-antigravity-cockpit/issues" target="_blank" class="footer-link feedback-link">
-                    💬 ${i18n.getLocale() === 'zh-cn' ? '反馈' : 'Feedback'}
+                    💬 ${i18n.t('footer.feedback')}
                 </a>
             </div>
         </div>

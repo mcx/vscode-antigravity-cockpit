@@ -226,4 +226,8 @@ export const ru = {
     'displayMode.title': 'Режим отображения',
     'displayMode.webview': 'Панель (Webview)',
     'displayMode.quickpick': 'Режим QuickPick',
+
+    // Footer
+    'footer.enjoyingThis': 'Нравится? Поставьте нам ⭐!',
+    'footer.feedback': 'Обратная связь',
 };

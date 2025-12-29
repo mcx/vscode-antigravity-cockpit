@@ -227,4 +227,8 @@ export const zhCN = {
     'displayMode.title': '显示模式',
     'displayMode.webview': '仪表盘 (Webview)',
     'displayMode.quickpick': '快捷模式 (QuickPick)',
+
+    // Footer
+    'footer.enjoyingThis': '觉得好用？给个 ⭐ 支持一下！',
+    'footer.feedback': '反馈',
 };

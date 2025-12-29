@@ -226,4 +226,8 @@ export const ptBR = {
     'displayMode.title': 'Modo de Exibição',
     'displayMode.webview': 'Painel (Webview)',
     'displayMode.quickpick': 'Modo QuickPick',
+
+    // Footer
+    'footer.enjoyingThis': 'Gostando? Dê-nos uma ⭐!',
+    'footer.feedback': 'Feedback',
 };

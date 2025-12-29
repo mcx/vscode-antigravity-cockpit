@@ -226,4 +226,8 @@ export const cs = {
     'displayMode.title': 'Režim Zobrazení',
     'displayMode.webview': 'Panel (Webview)',
     'displayMode.quickpick': 'Režim QuickPick',
+
+    // Footer
+    'footer.enjoyingThis': 'Líbí se vám? Dejte nám ⭐!',
+    'footer.feedback': 'Zpětná vazba',
 };

@@ -226,4 +226,8 @@ export const tr = {
     'displayMode.title': 'Görüntüleme Modu',
     'displayMode.webview': 'Gösterge Paneli (Webview)',
     'displayMode.quickpick': 'QuickPick Modu',
+
+    // Footer
+    'footer.enjoyingThis': 'Beğendiniz mi? Bize bir ⭐ verin!',
+    'footer.feedback': 'Geri Bildirim',
 };

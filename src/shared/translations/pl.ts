@@ -226,4 +226,8 @@ export const pl = {
     'displayMode.title': 'Tryb Wyświetlania',
     'displayMode.webview': 'Panel (Webview)',
     'displayMode.quickpick': 'Tryb QuickPick',
+
+    // Footer
+    'footer.enjoyingThis': 'Podoba się? Daj nam ⭐!',
+    'footer.feedback': 'Opinie',
 };

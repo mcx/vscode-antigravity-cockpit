@@ -227,4 +227,8 @@ export const en = {
     'displayMode.title': 'Display Mode',
     'displayMode.webview': 'Dashboard (Webview)',
     'displayMode.quickpick': 'QuickPick Mode',
+
+    // Footer
+    'footer.enjoyingThis': 'Enjoying this? Give us a ⭐!',
+    'footer.feedback': 'Feedback',
 };
