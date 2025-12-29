@@ -106,11 +106,36 @@ export const pl = {
     'grouping.autoGroupHint': 'Przelicz grupy na podstawie aktualnego limitu',
     'grouping.description': 'Ten tryb agreguje modele współdzielące ten sam limit. Obsługuje zmianę nazwy, sortowanie i synchronizację z paskiem stanu. Kliknij "Auto Grupowanie", aby inteligentnie kategoryzować, lub przełącz "Grupy Limitów" powyżej, aby wrócić.',
 
+    // Własne Grupowanie
+    'customGrouping.title': 'Zarządzaj Grupami',
+    'customGrouping.hint': 'Tylko modele z tym samym limitem i czasem resetu mogą być zgrupowane. Modele zostaną automatycznie usunięte z grupy, jeśli zmiany limitu spowodują niespójność.',
+    'customGrouping.smartGroup': 'Auto Grupowanie',
+    'customGrouping.smartGroupHint': 'Automatycznie kategoryzuj modele na podstawie aktualnego limitu',
+    'customGrouping.addGroup': 'Dodaj Grupę',
+    'customGrouping.groupList': 'Lista Grup',
+    'customGrouping.ungrouped': 'Niezgrupowane Modele',
+    'customGrouping.ungroupedHint': 'Kliknij, aby dodać do grupy',
+    'customGrouping.addModel': 'Dodaj Modele',
+    'customGrouping.removeModel': 'Usuń',
+    'customGrouping.deleteGroup': 'Usuń Grupę',
+    'customGrouping.renameGroup': 'Zmień nazwę',
+    'customGrouping.save': 'Zapisz Grupy',
+    'customGrouping.cancel': 'Anuluj',
+    'customGrouping.noModels': 'Brak dostępnych modeli',
+    'customGrouping.quotaMismatch': 'Niespójność Limitu',
+    'customGrouping.resetMismatch': 'Niespójność Czasu Resetu',
+    'customGrouping.saved': 'Grupy zapisane pomyślnie',
+    'customGrouping.emptyGroupWarning': 'Istnieją puste grupy. Kontynuować zapisywanie?',
+
     // Zmiana Nazwy Modelu
     'model.rename': 'Zmień Nazwę Modelu',
+    'model.renameTitle': 'Zmień nazwę',
     'model.renamePrompt': 'Wprowadź nową nazwę dla tego modelu:',
     'model.renamed': 'Model został przemianowany na {name}',
     'model.nameEmpty': 'Nazwa nie może być pusta',
+    'model.newName': 'Nowa nazwa',
+    'model.namePlaceholder': 'Wpisz nazwę...',
+    'model.ok': 'OK',
     'model.reset': 'Resetuj',
 
     // Format Paska Stanu

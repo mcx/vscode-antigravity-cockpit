@@ -294,6 +294,28 @@ export class MessageController {
                         this.reactor.reprocess();
                     }
                     break;
+
+                case 'saveCustomGrouping': {
+                    // 保存自定义分组
+                    const { customGroupMappings, customGroupNames } = message;
+                    if (customGroupMappings) {
+                        logger.info(`User saved custom grouping: ${Object.keys(customGroupMappings).length} models`);
+                        await configService.updateGroupMappings(customGroupMappings);
+                        
+                        // 清除之前的 pinnedGroups（因为 groupId 可能已变化）
+                        await configService.updateConfig('pinnedGroups', []);
+                        
+                        // 保存分组名称（如果有）
+                        if (customGroupNames) {
+                            await configService.updateConfig('groupingCustomNames', customGroupNames);
+                        }
+                        
+                        // 刷新 UI
+                        this.reactor.reprocess();
+                    }
+                    break;
+                }
+
             }
         });
     }

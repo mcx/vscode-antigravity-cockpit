@@ -323,7 +323,10 @@ export type WebviewMessageType =
     | 'toggleProfile'
     | 'updateViewMode'
     | 'updateDisplayMode'
-    | 'updateDataMasked';
+    | 'updateDataMasked'
+    | 'openCustomGrouping'
+    | 'saveCustomGrouping'
+    | 'previewAutoGroup';
 
 /** Webview 消息 */
 export interface WebviewMessage {
@@ -352,6 +355,10 @@ export interface WebviewMessage {
     displayMode?: 'webview' | 'quickpick';
     /** 数据遮罩状态 (updateDataMasked) */
     dataMasked?: boolean;
+    /** 自定义分组映射 (saveCustomGrouping) */
+    customGroupMappings?: Record<string, string>;
+    /** 自定义分组名称 (saveCustomGrouping) */
+    customGroupNames?: Record<string, string>;
 }
 
 /** Dashboard 配置 */
@@ -394,6 +401,8 @@ export interface DashboardConfig {
     displayMode?: string;
     /** 是否遮罩敏感数据 */
     dataMasked?: boolean;
+    /** 分组映射 (modelId -> groupId) */
+    groupMappings?: Record<string, string>;
 }
 
 /** 状态栏更新数据 */

@@ -106,11 +106,36 @@ export const de = {
     'grouping.autoGroupHint': 'Gruppen basierend auf aktuellem Kontingent neu berechnen',
     'grouping.description': 'Dieser Modus aggregiert Modelle, die dasselbe Kontingent teilen. Unterstützt Umbenennen, Sortieren und Statusleisten-Sync. Klicken Sie auf "Auto-Gruppierung" um intelligent zu kategorisieren, oder schalten Sie oben "Kontingentgruppen" um.',
 
+    // Benutzerdefinierte Gruppierung
+    'customGrouping.title': 'Gruppen verwalten',
+    'customGrouping.hint': 'Nur Modelle mit demselben Kontingent und derselben Rücksetzzeit können gruppiert werden. Modelle werden automatisch aus der Gruppe entfernt, wenn Kontingentänderungen zu Inkonsistenzen führen.',
+    'customGrouping.smartGroup': 'Auto-Gruppierung',
+    'customGrouping.smartGroupHint': 'Modelle automatisch nach aktuellem Kontingent kategorisieren',
+    'customGrouping.addGroup': 'Gruppe hinzufügen',
+    'customGrouping.groupList': 'Gruppenliste',
+    'customGrouping.ungrouped': 'Nicht gruppierte Modelle',
+    'customGrouping.ungroupedHint': 'Klicken, um zur Gruppe hinzuzufügen',
+    'customGrouping.addModel': 'Modelle hinzufügen',
+    'customGrouping.removeModel': 'Entfernen',
+    'customGrouping.deleteGroup': 'Gruppe löschen',
+    'customGrouping.renameGroup': 'Umbenennen',
+    'customGrouping.save': 'Gruppen speichern',
+    'customGrouping.cancel': 'Abbrechen',
+    'customGrouping.noModels': 'Keine Modelle verfügbar',
+    'customGrouping.quotaMismatch': 'Kontingent-Unstimmigkeit',
+    'customGrouping.resetMismatch': 'Rücksetzzeit-Unstimmigkeit',
+    'customGrouping.saved': 'Gruppen erfolgreich gespeichert',
+    'customGrouping.emptyGroupWarning': 'Leere Gruppen vorhanden. Speichern fortsetzen?',
+
     // Modell umbenennen
     'model.rename': 'Modell umbenennen',
+    'model.renameTitle': 'Umbenennen',
     'model.renamePrompt': 'Neuen Namen für dieses Modell eingeben:',
     'model.renamed': 'Modell umbenannt zu {name}',
     'model.nameEmpty': 'Name darf nicht leer sein',
+    'model.newName': 'Neuer Name',
+    'model.namePlaceholder': 'Namen eingeben...',
+    'model.ok': 'OK',
     'model.reset': 'Zurücksetzen',
 
     // Statusleisten-Format

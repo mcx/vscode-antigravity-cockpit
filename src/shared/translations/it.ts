@@ -106,11 +106,36 @@ export const it = {
     'grouping.autoGroupHint': 'Ricalcola gruppi in base alla quota attuale',
     'grouping.description': 'Questa modalità aggrega i modelli che condividono la stessa quota. Supporta rinomina, ordinamento e sincronizzazione con la barra di stato. Clicca "Raggruppa Auto" per categorizzare intelligentemente, o attiva "Gruppi Quote" sopra per tornare.',
 
+    // Raggruppamento Personalizzato
+    'customGrouping.title': 'Gestione Gruppi',
+    'customGrouping.hint': 'Solo i modelli con la stessa quota e tempo di ripristino possono essere raggruppati. I modelli verranno automaticamente rimossi dal gruppo se le variazioni di quota causano incongruenze.',
+    'customGrouping.smartGroup': 'Raggruppa Auto',
+    'customGrouping.smartGroupHint': 'Categorizza automaticamente i modelli in base alla quota attuale',
+    'customGrouping.addGroup': 'Aggiungi Gruppo',
+    'customGrouping.groupList': 'Elenco Gruppi',
+    'customGrouping.ungrouped': 'Modelli non Raggruppati',
+    'customGrouping.ungroupedHint': 'Clicca per aggiungere al gruppo',
+    'customGrouping.addModel': 'Aggiungi Modelli',
+    'customGrouping.removeModel': 'Rimuovi',
+    'customGrouping.deleteGroup': 'Elimina Gruppo',
+    'customGrouping.renameGroup': 'Rinomina',
+    'customGrouping.save': 'Salva Gruppi',
+    'customGrouping.cancel': 'Annulla',
+    'customGrouping.noModels': 'Nessun modello disponibile',
+    'customGrouping.quotaMismatch': 'Incoerenza Quota',
+    'customGrouping.resetMismatch': 'Incoerenza Tempo di Ripristino',
+    'customGrouping.saved': 'Gruppi salvati con successo',
+    'customGrouping.emptyGroupWarning': 'Esistono gruppi vuoti. Continuare il salvataggio?',
+
     // Rinomina Modello
     'model.rename': 'Rinomina Modello',
+    'model.renameTitle': 'Rinomina',
     'model.renamePrompt': 'Inserisci il nuovo nome per questo modello:',
     'model.renamed': 'Modello rinominato in {name}',
     'model.nameEmpty': 'Il nome non può essere vuoto',
+    'model.newName': 'Nuovo Nome',
+    'model.namePlaceholder': 'Inserisci nome...',
+    'model.ok': 'OK',
     'model.reset': 'Reimposta',
 
     // Formato Barra di Stato

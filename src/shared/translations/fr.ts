@@ -106,11 +106,36 @@ export const fr = {
     'grouping.autoGroupHint': 'Recalculer les groupes selon le quota actuel',
     'grouping.description': 'Ce mode agrège les modèles partageant le même quota. Supporte le renommage, le tri et la synchronisation avec la barre d\'état. Cliquez sur "Groupement Auto" pour catégoriser intelligemment, ou basculez "Groupes de Quota" ci-dessus pour revenir.',
 
+    // Regroupement Personnalisé
+    'customGrouping.title': 'Gérer les Groupes',
+    'customGrouping.hint': 'Seuls les modèles avec le même quota et la même heure de réinitialisation peuvent être groupés. Les modèles seront automatiquement retirés du groupe si les changements de quota entraînent une incohérence.',
+    'customGrouping.smartGroup': 'Groupement Auto',
+    'customGrouping.smartGroupHint': 'Catégoriser automatiquement les modèles selon le quota actuel',
+    'customGrouping.addGroup': 'Ajouter un Groupe',
+    'customGrouping.groupList': 'Liste des Groupes',
+    'customGrouping.ungrouped': 'Modèles Non Groupés',
+    'customGrouping.ungroupedHint': 'Cliquez pour ajouter au groupe',
+    'customGrouping.addModel': 'Ajouter des Modèles',
+    'customGrouping.removeModel': 'Retirer',
+    'customGrouping.deleteGroup': 'Supprimer le Groupe',
+    'customGrouping.renameGroup': 'Renommer',
+    'customGrouping.save': 'Enregistrer les Groupes',
+    'customGrouping.cancel': 'Annuler',
+    'customGrouping.noModels': 'Aucun modèle disponible',
+    'customGrouping.quotaMismatch': 'Incohérence de Quota',
+    'customGrouping.resetMismatch': 'Incohérence d\'Heure de Réinitialisation',
+    'customGrouping.saved': 'Groupes enregistrés avec succès',
+    'customGrouping.emptyGroupWarning': 'Il existe des groupes vides. Continuer l\'enregistrement ?',
+
     // Renommer le Modèle
     'model.rename': 'Renommer le Modèle',
+    'model.renameTitle': 'Renommer',
     'model.renamePrompt': 'Entrez le nouveau nom pour ce modèle:',
     'model.renamed': 'Modèle renommé en {name}',
     'model.nameEmpty': 'Le nom ne peut pas être vide',
+    'model.newName': 'Nouveau Nom',
+    'model.namePlaceholder': 'Entrez le nom...',
+    'model.ok': 'OK',
     'model.reset': 'Réinitialiser',
 
     // Format de la Barre d'État

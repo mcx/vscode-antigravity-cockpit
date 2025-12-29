@@ -106,11 +106,36 @@ export const ru = {
     'grouping.autoGroupHint': 'Пересчитать группы на основе текущей квоты',
     'grouping.description': 'Этот режим объединяет модели с общей квотой. Поддерживает переименование, сортировку и синхронизацию со строкой состояния. Нажмите "Автогруппировка" для умной категоризации или переключите "Группы квот" выше для возврата.',
 
+    // Настраиваемая группировка
+    'customGrouping.title': 'Управление группами',
+    'customGrouping.hint': 'В одну группу можно объединить только модели с одинаковой квотой и временем сброса. Модели будут автоматически удалены из группы, если изменения квоты приведут к несоответствию.',
+    'customGrouping.smartGroup': 'Автогруппировка',
+    'customGrouping.smartGroupHint': 'Автоматически распределить модели по группам на основе текущей квоты',
+    'customGrouping.addGroup': 'Добавить группу',
+    'customGrouping.groupList': 'Список групп',
+    'customGrouping.ungrouped': 'Модели без группы',
+    'customGrouping.ungroupedHint': 'Нажмите, чтобы добавить в группу',
+    'customGrouping.addModel': 'Добавить модели',
+    'customGrouping.removeModel': 'Удалить',
+    'customGrouping.deleteGroup': 'Удалить группу',
+    'customGrouping.renameGroup': 'Переименовать',
+    'customGrouping.save': 'Сохранить группы',
+    'customGrouping.cancel': 'Отмена',
+    'customGrouping.noModels': 'Нет доступных моделей',
+    'customGrouping.quotaMismatch': 'Несоответствие квоты',
+    'customGrouping.resetMismatch': 'Несоответствие времени сброса',
+    'customGrouping.saved': 'Группы успешно сохранены',
+    'customGrouping.emptyGroupWarning': 'Существуют пустые группы. Продолжить сохранение?',
+
     // Переименование модели
     'model.rename': 'Переименовать модель',
+    'model.renameTitle': 'Переименовать',
     'model.renamePrompt': 'Введите новое имя для этой модели:',
     'model.renamed': 'Модель переименована в {name}',
     'model.nameEmpty': 'Имя не может быть пустым',
+    'model.newName': 'Новое имя',
+    'model.namePlaceholder': 'Введите имя...',
+    'model.ok': 'ОК',
     'model.reset': 'Сбросить',
 
     // Формат строки состояния

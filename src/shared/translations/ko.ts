@@ -106,11 +106,36 @@ export const ko = {
     'grouping.autoGroupHint': '현재 할당량에 따라 그룹 재계산',
     'grouping.description': '이 모드는 동일한 할당량을 공유하는 모델을 집계합니다. 이름 변경, 정렬 및 상태 표시줄 동기화를 지원합니다. "자동 그룹화"를 클릭하여 지능적으로 분류하거나 위의 "할당량 그룹"을 전환하여 돌아갑니다.',
 
+    // Custom Grouping
+    'customGrouping.title': '그룹 관리',
+    'customGrouping.hint': '할당량과 초기화 시간이 동일한 모델만 같은 그룹으로 묶을 수 있습니다. 할당량 변경으로 인해 불일치가 발생하면 모델이 자동으로 그룹에서 제거됩니다.',
+    'customGrouping.smartGroup': '자동 그룹화',
+    'customGrouping.smartGroupHint': '현재 할당량을 기준으로 모델을 자동 분류합니다',
+    'customGrouping.addGroup': '그룹 추가',
+    'customGrouping.groupList': '그룹 목록',
+    'customGrouping.ungrouped': '그룹화되지 않은 모델',
+    'customGrouping.ungroupedHint': '클릭하여 그룹에 추가',
+    'customGrouping.addModel': '모델 추가',
+    'customGrouping.removeModel': '제거',
+    'customGrouping.deleteGroup': '그룹 삭제',
+    'customGrouping.renameGroup': '이름 변경',
+    'customGrouping.save': '그룹 저장',
+    'customGrouping.cancel': '취소',
+    'customGrouping.noModels': '사용 가능한 모델이 없습니다',
+    'customGrouping.quotaMismatch': '할당량 불일치',
+    'customGrouping.resetMismatch': '초기화 시간 불일치',
+    'customGrouping.saved': '그룹이 성공적으로 저장되었습니다',
+    'customGrouping.emptyGroupWarning': '빈 그룹이 존재합니다. 계속 저장하시겠습니까?',
+
     // 모델 이름 변경
     'model.rename': '모델 이름 변경',
+    'model.renameTitle': '이름 변경',
     'model.renamePrompt': '이 모델의 새 이름을 입력하세요:',
     'model.renamed': '모델 이름이 {name}(으)로 변경됨',
     'model.nameEmpty': '이름은 비워둘 수 없습니다',
+    'model.newName': '새 이름',
+    'model.namePlaceholder': '이름 입력...',
+    'model.ok': '확인',
     'model.reset': '초기화',
 
     // 상태 표시줄 형식

@@ -38,6 +38,14 @@
     // 刷新冷却时间（秒），默认 120 秒
     let refreshCooldown = 120;
 
+    // 自定义分组弹框状态
+    const customGroupingModal = document.getElementById('custom-grouping-modal');
+    let customGroupingState = {
+        groups: [],       // { id: string, name: string, modelIds: string[] }
+        allModels: [],    // 所有模型数据（从 snapshot 获取）
+        groupMappings: {} // 原始分组映射（用于保存）
+    };
+
     // ============ 初始化 ============
 
     function init() {
@@ -112,6 +120,28 @@
         const resetNameBtn = document.getElementById('reset-name-btn');
         if (resetNameBtn) {
             resetNameBtn.addEventListener('click', resetName);
+        }
+
+        // 自定义分组弹框事件绑定
+        const closeCustomGroupingBtn = document.getElementById('close-custom-grouping-btn');
+        if (closeCustomGroupingBtn) {
+            closeCustomGroupingBtn.addEventListener('click', closeCustomGroupingModal);
+        }
+        const cancelCustomGroupingBtn = document.getElementById('cancel-custom-grouping-btn');
+        if (cancelCustomGroupingBtn) {
+            cancelCustomGroupingBtn.addEventListener('click', closeCustomGroupingModal);
+        }
+        const saveCustomGroupingBtn = document.getElementById('save-custom-grouping-btn');
+        if (saveCustomGroupingBtn) {
+            saveCustomGroupingBtn.addEventListener('click', saveCustomGrouping);
+        }
+        const smartGroupBtn = document.getElementById('smart-group-btn');
+        if (smartGroupBtn) {
+            smartGroupBtn.addEventListener('click', handleSmartGroup);
+        }
+        const addGroupBtn = document.getElementById('add-group-btn');
+        if (addGroupBtn) {
+            addGroupBtn.addEventListener('click', handleAddGroup);
         }
 
         // 事件委托：处理置顶开关
@@ -627,7 +657,7 @@
             // Determine ID and Name
             const id = isGroup ? item.groupId : item.modelId;
             const name = isGroup 
-                ? (config?.groupingCustomNames && config.groupingCustomNames[id]) || item.groupName 
+                ? (config?.groupCustomNames && config.groupCustomNames[id]) || item.groupName 
                 : (config?.modelCustomNames && config.modelCustomNames[id]) || item.label;
 
             // Pin Status
@@ -1097,20 +1127,526 @@
         bar.className = 'auto-group-toolbar';
         bar.innerHTML = `
             <span class="grouping-hint">
-                ${i18n['grouping.description'] || 'This mode aggregates models sharing the same quota. Supports renaming, sorting, and status bar sync. Click "Auto Group" to intelligently categorize, or toggle "Quota Groups" above to switch back.'}
+                ${i18n['grouping.description'] || 'This mode aggregates models sharing the same quota. Supports renaming, sorting, and status bar sync. Click "Manage Groups" to customize, or toggle "Quota Groups" above to switch back.'}
             </span>
-            <button id="auto-group-btn" class="auto-group-link" title="${i18n['grouping.autoGroupHint'] || 'Recalculate groups based on current quota'}">
-                <span class="icon">🔄</span>
-                ${i18n['grouping.autoGroup'] || 'Auto Group'}
+            <button id="manage-group-btn" class="auto-group-link" title="${i18n['customGrouping.title'] || 'Manage Groups'}">
+                <span class="icon">⚙️</span>
+                ${i18n['customGrouping.title'] || 'Manage Groups'}
             </button>
         `;
         dashboard.appendChild(bar);
         
-        // 绑定点击事件
-        const btn = bar.querySelector('#auto-group-btn');
+        // 绑定点击事件 - 打开自定义分组弹框
+        const btn = bar.querySelector('#manage-group-btn');
         if (btn) {
-            btn.addEventListener('click', handleAutoGroup);
+            btn.addEventListener('click', openCustomGroupingModal);
         }
+    }
+
+    // ============ 自定义分组弹框 ============
+
+    function openCustomGroupingModal() {
+        if (!customGroupingModal || !lastSnapshot) return;
+        
+        // 初始化状态
+        const models = lastSnapshot.models || [];
+        customGroupingState.allModels = models;
+        customGroupingState.groupMappings = { ...(currentConfig.groupMappings || {}) };
+        
+        // 从现有映射构建分组
+        const groupMap = new Map(); // groupId -> { id, name, modelIds }
+        const groupNames = currentConfig.groupCustomNames || {};
+        
+        for (const model of models) {
+            const groupId = customGroupingState.groupMappings[model.modelId];
+            if (groupId) {
+                if (!groupMap.has(groupId)) {
+                    // 尝试从 groupNames 获取名称，否则使用默认名称
+                    let groupName = '';
+                    for (const modelId of Object.keys(groupNames)) {
+                        if (customGroupingState.groupMappings[modelId] === groupId) {
+                            groupName = groupNames[modelId];
+                            break;
+                        }
+                    }
+                    groupMap.set(groupId, {
+                        id: groupId,
+                        name: groupName || `Group ${groupMap.size + 1}`,
+                        modelIds: []
+                    });
+                }
+                groupMap.get(groupId).modelIds.push(model.modelId);
+            }
+        }
+        
+        customGroupingState.groups = Array.from(groupMap.values());
+        
+        // 渲染弹框内容
+        renderCustomGroupingContent();
+        
+        customGroupingModal.classList.remove('hidden');
+    }
+
+    function closeCustomGroupingModal() {
+        if (customGroupingModal) {
+            customGroupingModal.classList.add('hidden');
+        }
+    }
+
+    function renderCustomGroupingContent() {
+        const groupsList = document.getElementById('custom-groups-list');
+        const ungroupedList = document.getElementById('ungrouped-models-list');
+        
+        if (!groupsList || !ungroupedList) return;
+        
+        // 获取已分组的模型 ID
+        const groupedModelIds = new Set();
+        customGroupingState.groups.forEach(g => g.modelIds.forEach(id => groupedModelIds.add(id)));
+        
+        // 渲染分组列表
+        if (customGroupingState.groups.length === 0) {
+            groupsList.innerHTML = `<div class="empty-groups-hint">${i18n['customGrouping.noModels'] || 'No groups yet. Click "Add Group" to create one.'}</div>`;
+        } else {
+            groupsList.innerHTML = customGroupingState.groups.map((group, index) => {
+                const modelsHtml = group.modelIds.map(modelId => {
+                    const model = customGroupingState.allModels.find(m => m.modelId === modelId);
+                    const name = model ? (currentConfig.modelCustomNames?.[modelId] || model.label) : modelId;
+                    return `
+                        <span class="custom-model-tag" data-model-id="${modelId}">
+                            ${name}
+                            <button class="remove-model-btn" data-group-index="${index}" data-model-id="${modelId}" title="${i18n['customGrouping.removeModel'] || 'Remove'}">×</button>
+                        </span>
+                    `;
+                }).join('');
+                
+                return `
+                    <div class="custom-group-item" data-group-index="${index}">
+                        <div class="custom-group-header">
+                            <div class="custom-group-name">
+                                <span>📦</span>
+                                <input type="text" value="${group.name}" data-group-index="${index}" placeholder="Group name...">
+                            </div>
+                            <div class="custom-group-actions">
+                                <button class="delete-group-btn" data-group-index="${index}" title="${i18n['customGrouping.deleteGroup'] || 'Delete Group'}">🗑️</button>
+                            </div>
+                        </div>
+                        <div class="custom-group-models">
+                            ${modelsHtml}
+                            <button class="add-model-btn" data-group-index="${index}">
+                                ➕ ${i18n['customGrouping.addModel'] || 'Add Model'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // 绑定事件
+            groupsList.querySelectorAll('.remove-model-btn').forEach(btn => {
+                btn.addEventListener('click', handleRemoveModel);
+            });
+            groupsList.querySelectorAll('.delete-group-btn').forEach(btn => {
+                btn.addEventListener('click', handleDeleteGroup);
+            });
+            groupsList.querySelectorAll('.add-model-btn').forEach(btn => {
+                btn.addEventListener('click', handleAddModelToGroup);
+            });
+            groupsList.querySelectorAll('.custom-group-name input').forEach(input => {
+                input.addEventListener('change', handleGroupNameChange);
+            });
+        }
+        
+        // 渲染未分组模型
+        const ungroupedModels = customGroupingState.allModels.filter(m => !groupedModelIds.has(m.modelId));
+        
+        if (ungroupedModels.length === 0) {
+            ungroupedList.innerHTML = `<div style="color: var(--text-secondary); font-size: 12px;">${i18n['customGrouping.noModels'] || 'All models are grouped'}</div>`;
+        } else {
+            ungroupedList.innerHTML = ungroupedModels.map(model => {
+                const name = currentConfig.modelCustomNames?.[model.modelId] || model.label;
+                const quotaPct = (model.remainingPercentage || 0).toFixed(0);
+                return `
+                    <div class="ungrouped-model-item" data-model-id="${model.modelId}" title="${model.modelId}">
+                        ${name}
+                        <span class="quota-badge">${quotaPct}%</span>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
+
+    function handleAddGroup() {
+        const newGroupId = 'custom_group_' + Date.now();
+        customGroupingState.groups.push({
+            id: newGroupId,
+            name: `Group ${customGroupingState.groups.length + 1}`,
+            modelIds: []
+        });
+        renderCustomGroupingContent();
+    }
+
+    function handleDeleteGroup(e) {
+        const index = parseInt(e.target.dataset.groupIndex, 10);
+        if (!isNaN(index) && index >= 0 && index < customGroupingState.groups.length) {
+            customGroupingState.groups.splice(index, 1);
+            renderCustomGroupingContent();
+        }
+    }
+
+    function handleRemoveModel(e) {
+        e.stopPropagation();
+        const groupIndex = parseInt(e.target.dataset.groupIndex, 10);
+        const modelId = e.target.dataset.modelId;
+        
+        if (!isNaN(groupIndex) && modelId) {
+            const group = customGroupingState.groups[groupIndex];
+            if (group) {
+                group.modelIds = group.modelIds.filter(id => id !== modelId);
+                renderCustomGroupingContent();
+            }
+        }
+    }
+
+    function handleGroupNameChange(e) {
+        const index = parseInt(e.target.dataset.groupIndex, 10);
+        if (!isNaN(index) && customGroupingState.groups[index]) {
+            customGroupingState.groups[index].name = e.target.value.trim() || `Group ${index + 1}`;
+        }
+    }
+
+    function handleAddModelToGroup(e) {
+        const groupIndex = parseInt(e.target.dataset.groupIndex, 10);
+        if (isNaN(groupIndex)) return;
+        
+        const group = customGroupingState.groups[groupIndex];
+        if (!group) return;
+        
+        // 获取已分组的模型
+        const groupedModelIds = new Set();
+        customGroupingState.groups.forEach(g => g.modelIds.forEach(id => groupedModelIds.add(id)));
+        
+        // 获取可用模型（未分组的）
+        const availableModels = customGroupingState.allModels.filter(m => !groupedModelIds.has(m.modelId));
+        
+        if (availableModels.length === 0) {
+            showToast(i18n['customGrouping.noModels'] || 'No available models', 'info');
+            return;
+        }
+        
+        // 获取组的配额签名（如果组已有模型）
+        let groupSignature = null;
+        if (group.modelIds.length > 0) {
+            const firstModelId = group.modelIds[0];
+            const firstModel = customGroupingState.allModels.find(m => m.modelId === firstModelId);
+            if (firstModel) {
+                groupSignature = {
+                    remainingPercentage: firstModel.remainingPercentage,
+                    resetTimeDisplay: firstModel.resetTimeDisplay
+                };
+            }
+        }
+        
+        // 创建下拉选择菜单
+        showModelSelectDropdown(e.target, availableModels, groupSignature, (selectedModelId) => {
+            group.modelIds.push(selectedModelId);
+            renderCustomGroupingContent();
+        });
+    }
+
+    function showModelSelectDropdown(anchor, models, groupSignature, onSelect) {
+        // 移除已存在的下拉框
+        const existingDropdown = document.querySelector('.model-select-dropdown');
+        if (existingDropdown) {
+            existingDropdown.remove();
+        }
+        
+        const dropdown = document.createElement('div');
+        dropdown.className = 'model-select-dropdown';
+        
+        // 计算位置
+        const rect = anchor.getBoundingClientRect();
+        dropdown.style.position = 'fixed';
+        dropdown.style.left = rect.left + 'px';
+        dropdown.style.top = (rect.bottom + 4) + 'px';
+        
+        // 计算每个模型的兼容性
+        const modelsWithCompatibility = models.map(model => {
+            let isCompatible = true;
+            let incompatibleReason = '';
+            
+            if (groupSignature) {
+                if (model.remainingPercentage !== groupSignature.remainingPercentage) {
+                    isCompatible = false;
+                    incompatibleReason = i18n['customGrouping.quotaMismatch'] || 'Quota mismatch';
+                } else if (model.resetTimeDisplay !== groupSignature.resetTimeDisplay) {
+                    isCompatible = false;
+                    incompatibleReason = i18n['customGrouping.resetMismatch'] || 'Reset time mismatch';
+                }
+            }
+            
+            return { model, isCompatible, incompatibleReason };
+        });
+        
+        // 排序：兼容的排在前面
+        modelsWithCompatibility.sort((a, b) => {
+            if (a.isCompatible && !b.isCompatible) return -1;
+            if (!a.isCompatible && b.isCompatible) return 1;
+            return 0;
+        });
+        
+        // 检查是否有兼容的模型
+        const hasCompatibleModels = modelsWithCompatibility.some(m => m.isCompatible);
+        
+        dropdown.innerHTML = `
+            <div class="model-select-list">
+                ${modelsWithCompatibility.map(({ model, isCompatible, incompatibleReason }) => {
+                    const name = currentConfig.modelCustomNames?.[model.modelId] || model.label;
+                    const quotaPct = (model.remainingPercentage || 0).toFixed(1);
+                    
+                    return `
+                        <label class="model-select-item ${isCompatible ? '' : 'disabled'}" 
+                             data-model-id="${model.modelId}" 
+                             data-compatible="${isCompatible}">
+                            <input type="checkbox" class="model-checkbox" 
+                                   value="${model.modelId}" 
+                                   ${isCompatible ? '' : 'disabled'}>
+                            <span class="model-name">${name}</span>
+                            <span class="model-quota">${quotaPct}%</span>
+                            ${!isCompatible ? `<span class="incompatible-reason">${incompatibleReason}</span>` : ''}
+                        </label>
+                    `;
+                }).join('')}
+            </div>
+            ${hasCompatibleModels ? `
+                <div class="model-select-footer">
+                    <button class="btn-confirm-add" disabled>
+                        ${i18n['customGrouping.addModel'] || 'Add'} (<span class="selected-count">0</span>)
+                    </button>
+                </div>
+            ` : ''}
+        `;
+        
+        document.body.appendChild(dropdown);
+        
+        // 选中计数和确认按钮逻辑
+        const confirmBtn = dropdown.querySelector('.btn-confirm-add');
+        const countSpan = dropdown.querySelector('.selected-count');
+        const allCheckboxes = dropdown.querySelectorAll('.model-checkbox');
+        
+        const updateSelectionState = () => {
+            const checkedBoxes = dropdown.querySelectorAll('.model-checkbox:checked');
+            const selectedCount = checkedBoxes.length;
+            
+            // 更新计数和按钮状态
+            if (countSpan) countSpan.textContent = selectedCount;
+            if (confirmBtn) confirmBtn.disabled = selectedCount === 0;
+            
+            // 获取当前选中模型的签名（用于动态兼容性检查）
+            let currentSignature = groupSignature; // 使用分组已有的签名
+            
+            if (!currentSignature && selectedCount > 0) {
+                // 如果分组为空，使用第一个选中模型的签名
+                const firstCheckedId = checkedBoxes[0].value;
+                const firstModel = modelsWithCompatibility.find(m => m.model.modelId === firstCheckedId);
+                if (firstModel) {
+                    currentSignature = {
+                        remainingPercentage: firstModel.model.remainingPercentage,
+                        resetTimeDisplay: firstModel.model.resetTimeDisplay
+                    };
+                }
+            }
+            
+            // 更新所有 checkbox 的禁用状态
+            allCheckboxes.forEach(cb => {
+                if (cb.checked) return; // 已勾选的不处理
+                
+                const modelId = cb.value;
+                const modelData = modelsWithCompatibility.find(m => m.model.modelId === modelId);
+                if (!modelData) return;
+                
+                const item = cb.closest('.model-select-item');
+                if (!item) return;
+                
+                // 检查兼容性
+                let isCompatible = true;
+                let reason = '';
+                
+                if (currentSignature) {
+                    if (modelData.model.remainingPercentage !== currentSignature.remainingPercentage) {
+                        isCompatible = false;
+                        reason = i18n['customGrouping.quotaMismatch'] || 'Quota mismatch';
+                    } else if (modelData.model.resetTimeDisplay !== currentSignature.resetTimeDisplay) {
+                        isCompatible = false;
+                        reason = i18n['customGrouping.resetMismatch'] || 'Reset time mismatch';
+                    }
+                }
+                
+                cb.disabled = !isCompatible;
+                item.classList.toggle('disabled', !isCompatible);
+                
+                // 更新或移除不兼容原因显示
+                let reasonSpan = item.querySelector('.incompatible-reason');
+                if (!isCompatible) {
+                    if (!reasonSpan) {
+                        reasonSpan = document.createElement('span');
+                        reasonSpan.className = 'incompatible-reason';
+                        item.appendChild(reasonSpan);
+                    }
+                    reasonSpan.textContent = reason;
+                } else {
+                    if (reasonSpan) reasonSpan.remove();
+                }
+            });
+        };
+        
+        allCheckboxes.forEach(cb => {
+            if (!cb.disabled) {
+                cb.addEventListener('change', updateSelectionState);
+            }
+        });
+        
+        // 确认按钮点击
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const selectedIds = Array.from(dropdown.querySelectorAll('.model-checkbox:checked'))
+                    .map(cb => cb.value);
+                if (selectedIds.length > 0) {
+                    // 批量添加
+                    selectedIds.forEach(modelId => onSelect(modelId));
+                    dropdown.remove();
+                }
+            });
+        }
+        
+        // 点击外部关闭
+        const closeHandler = (e) => {
+            if (!dropdown.contains(e.target) && e.target !== anchor) {
+                dropdown.remove();
+                document.removeEventListener('click', closeHandler);
+            }
+        };
+        setTimeout(() => {
+            document.addEventListener('click', closeHandler);
+        }, 10);
+    }
+
+    function handleSmartGroup() {
+        // 使用现有的自动分组逻辑预填数据
+        const models = customGroupingState.allModels;
+        if (!models || models.length === 0) {
+            showToast(i18n['customGrouping.noModels'] || 'No models available', 'info');
+            return;
+        }
+        
+        // 保存现有分组名称映射（modelId -> groupName）
+        const existingGroupNames = {};
+        for (const group of customGroupingState.groups) {
+            for (const modelId of group.modelIds) {
+                existingGroupNames[modelId] = group.name;
+            }
+        }
+        
+        // 按配额签名分组
+        const signatureMap = new Map(); // signature -> modelIds
+        for (const model of models) {
+            const signature = `${(model.remainingPercentage || 0).toFixed(6)}_${model.resetTimeDisplay || ''}`;
+            if (!signatureMap.has(signature)) {
+                signatureMap.set(signature, []);
+            }
+            signatureMap.get(signature).push(model.modelId);
+        }
+        
+        // 转换为分组结构
+        customGroupingState.groups = [];
+        let groupIndex = 1;
+        for (const [signature, modelIds] of signatureMap) {
+            // 使用排序后的副本生成稳定的 groupId，保持 modelIds 原始顺序
+            const groupId = [...modelIds].sort().join('_');
+            
+            // 尝试继承现有分组名称
+            // 优先使用组内模型之前的分组名称（按出现次数投票）
+            const nameVotes = {};
+            for (const modelId of modelIds) {
+                const existingName = existingGroupNames[modelId];
+                if (existingName) {
+                    nameVotes[existingName] = (nameVotes[existingName] || 0) + 1;
+                }
+            }
+            
+            // 找出投票最多的名称
+            let inheritedName = '';
+            let maxVotes = 0;
+            for (const [name, votes] of Object.entries(nameVotes)) {
+                if (votes > maxVotes) {
+                    maxVotes = votes;
+                    inheritedName = name;
+                }
+            }
+            
+            // 如果没有继承名称，使用备选方案
+            let groupName = inheritedName;
+            if (!groupName) {
+                // 也尝试从 config 中读取
+                const configGroupNames = currentConfig.groupCustomNames || {};
+                for (const modelId of modelIds) {
+                    if (configGroupNames[modelId]) {
+                        groupName = configGroupNames[modelId];
+                        break;
+                    }
+                }
+            }
+            
+            // 最终备选：单模型用模型名，多模型用 Group N
+            if (!groupName) {
+                const firstModel = models.find(m => m.modelId === modelIds[0]);
+                groupName = modelIds.length === 1 
+                    ? (currentConfig.modelCustomNames?.[modelIds[0]] || firstModel?.label || `Group ${groupIndex}`)
+                    : `Group ${groupIndex}`;
+            }
+            
+            customGroupingState.groups.push({
+                id: groupId,
+                name: groupName,
+                modelIds: modelIds
+            });
+            groupIndex++;
+        }
+        
+        renderCustomGroupingContent();
+        showToast(i18n['customGrouping.smartGroup'] + ': ' + customGroupingState.groups.length + ' groups', 'success');
+    }
+
+    function saveCustomGrouping() {
+        // 检查是否有空分组
+        const emptyGroups = customGroupingState.groups.filter(g => g.modelIds.length === 0);
+        if (emptyGroups.length > 0) {
+            // 移除空分组
+            customGroupingState.groups = customGroupingState.groups.filter(g => g.modelIds.length > 0);
+        }
+        
+        // 构建新的 groupMappings
+        const newMappings = {};
+        const newGroupNames = {};
+        
+        for (const group of customGroupingState.groups) {
+            // 生成稳定的 groupId
+            const stableGroupId = group.modelIds.sort().join('_');
+            for (const modelId of group.modelIds) {
+                newMappings[modelId] = stableGroupId;
+                // 使用锚点共识机制保存分组名称
+                newGroupNames[modelId] = group.name;
+            }
+        }
+        
+        // 发送到扩展保存
+        vscode.postMessage({
+            command: 'saveCustomGrouping',
+            customGroupMappings: newMappings,
+            customGroupNames: newGroupNames
+        });
+        
+        showToast(i18n['customGrouping.saved'] || 'Groups saved', 'success');
+        closeCustomGroupingModal();
     }
 
     // State for profile toggle

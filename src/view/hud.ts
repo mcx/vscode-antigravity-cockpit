@@ -108,6 +108,7 @@ export class CockpitHUD {
                 viewMode: config.viewMode,
                 displayMode: config.displayMode,
                 dataMasked: config.dataMasked,
+                groupMappings: config.groupMappings,
             });
         }
     }
@@ -396,20 +397,63 @@ export class CockpitHUD {
     <div id="rename-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>✏️ ${i18n.getLocale() === 'zh-cn' ? '重命名' : 'Rename'}</h3>
+                <h3>✏️ ${i18n.t('model.renameTitle')}</h3>
                 <button id="close-rename-btn" class="close-btn">×</button>
             </div>
             <div class="modal-body">
                 <div class="setting-item">
-                    <label for="rename-input">${i18n.getLocale() === 'zh-cn' ? '新名称' : 'New Name'}</label>
+                    <label for="rename-input">${i18n.t('model.newName')}</label>
                     <div class="setting-input-group">
-                        <input type="text" id="rename-input" placeholder="${i18n.getLocale() === 'zh-cn' ? '输入名称...' : 'Enter name...'}" maxlength="30">
+                        <input type="text" id="rename-input" placeholder="${i18n.t('model.namePlaceholder')}" maxlength="30">
                     </div>
                 </div>
             </div>
             <div class="modal-footer modal-footer-space-between">
-                <button id="reset-name-btn" class="btn-secondary">${i18n.getLocale() === 'zh-cn' ? '重置' : 'Reset'}</button>
-                <button id="save-rename-btn" class="btn-primary">${i18n.getLocale() === 'zh-cn' ? '确定' : 'OK'}</button>
+                <button id="reset-name-btn" class="btn-secondary">${i18n.t('model.reset')}</button>
+                <button id="save-rename-btn" class="btn-primary">${i18n.t('model.ok')}</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="custom-grouping-modal" class="modal hidden">
+        <div class="modal-content modal-content-large">
+            <div class="modal-header">
+                <h3>⚙️ ${i18n.t('customGrouping.title')}</h3>
+                <button id="close-custom-grouping-btn" class="close-btn">×</button>
+            </div>
+            <div class="modal-body custom-grouping-body">
+                <div class="custom-grouping-hint">
+                    💡 ${i18n.t('customGrouping.hint')}
+                </div>
+                <div class="custom-grouping-toolbar">
+                    <button id="smart-group-btn" class="btn-accent">
+                        <span class="icon">🪄</span>
+                        ${i18n.t('customGrouping.smartGroup')}
+                    </button>
+                    <button id="add-group-btn" class="btn-secondary">
+                        <span class="icon">➕</span>
+                        ${i18n.t('customGrouping.addGroup')}
+                    </button>
+                </div>
+                <div class="custom-grouping-content">
+                    <div class="custom-groups-section">
+                        <h4>📦 ${i18n.t('customGrouping.groupList')}</h4>
+                        <div id="custom-groups-list" class="custom-groups-list">
+                            <!-- Groups will be rendered here -->
+                        </div>
+                    </div>
+                    <div class="ungrouped-section">
+                        <h4>🎲 ${i18n.t('customGrouping.ungrouped')}</h4>
+                        <p class="ungrouped-hint">${i18n.t('customGrouping.ungroupedHint')}</p>
+                        <div id="ungrouped-models-list" class="ungrouped-models-list">
+                            <!-- Ungrouped models will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-custom-grouping-btn" class="btn-secondary">${i18n.t('customGrouping.cancel')}</button>
+                <button id="save-custom-grouping-btn" class="btn-primary">💾 ${i18n.t('customGrouping.save')}</button>
             </div>
         </div>
     </div>

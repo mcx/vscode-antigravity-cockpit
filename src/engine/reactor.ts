@@ -492,8 +492,8 @@ export class ReactorCore {
                 }
                 
                 // 自动分组检查：检查每个分组内模型的配额是否一致
-                // 如果不一致，说明最初的自动分组可能有误，触发一次完整的自动分组
-                let hasInconsistentGroup = false;
+                // 如果不一致，只将不一致的模型移出分组（保留用户自定义设置）
+                const modelsToRemove: string[] = [];
                 
                 for (const [groupId, groupModels] of groupMap) {
                     if (groupModels.length <= 1) {
@@ -501,45 +501,76 @@ export class ReactorCore {
                     }
                     
                     // 检查组内所有模型的配额签名（remainingFraction + resetTime）是否一致
-                    const firstModel = groupModels[0];
-                    const firstFraction = firstModel.remainingFraction ?? 0;
-                    const firstResetTime = firstModel.resetTime.getTime();
+                    // 使用多数派原则：找出最常见的配额签名，将不符合的模型移除
+                    const signatureCount = new Map<string, { count: number; fraction: number; resetTime: number }>();
                     
-                    for (let i = 1; i < groupModels.length; i++) {
-                        const model = groupModels[i];
+                    for (const model of groupModels) {
                         const fraction = model.remainingFraction ?? 0;
                         const resetTime = model.resetTime.getTime();
+                        const signature = `${fraction.toFixed(6)}_${resetTime}`;
                         
-                        if (fraction !== firstFraction || resetTime !== firstResetTime) {
-                            logger.info(`[AutoGroup] Group "${groupId}" has inconsistent quotas, triggering auto-group...`);
-                            hasInconsistentGroup = true;
-                            break;
+                        if (!signatureCount.has(signature)) {
+                            signatureCount.set(signature, { count: 0, fraction, resetTime });
+                        }
+                        signatureCount.get(signature)!.count++;
+                    }
+                    
+                    // 找出最常见的签名（多数派）
+                    let majoritySignature = '';
+                    let maxCount = 0;
+                    for (const [sig, data] of signatureCount) {
+                        if (data.count > maxCount) {
+                            maxCount = data.count;
+                            majoritySignature = sig;
                         }
                     }
                     
-                    if (hasInconsistentGroup) {
-                        break;
+                    // 标记不符合多数派的模型移出分组
+                    for (const model of groupModels) {
+                        const fraction = model.remainingFraction ?? 0;
+                        const resetTime = model.resetTime.getTime();
+                        const signature = `${fraction.toFixed(6)}_${resetTime}`;
+                        
+                        if (signature !== majoritySignature) {
+                            logger.info(`[GroupCheck] Removing model "${model.label}" from group "${groupId}" due to quota mismatch`);
+                            modelsToRemove.push(model.modelId);
+                        }
                     }
                 }
                 
-                // 如果发现不一致，重新计算分组并更新
-                if (hasInconsistentGroup) {
-                    const newMappings = ReactorCore.calculateGroupMappings(models);
+                // 更新 groupMappings，移除不一致的模型
+                if (modelsToRemove.length > 0) {
+                    const newMappings = { ...savedMappings };
+                    for (const modelId of modelsToRemove) {
+                        delete newMappings[modelId];
+                    }
+                    
                     configService.updateGroupMappings(newMappings).catch(err => {
                         logger.warn(`Failed to save updated groupMappings: ${err}`);
                     });
                     
-                    // 清空并重建 groupMap
-                    groupMap.clear();
-                    for (const model of models) {
-                        const groupId = newMappings[model.modelId];
-                        if (!groupMap.has(groupId)) {
-                            groupMap.set(groupId, []);
+                    // 从 groupMap 中移除这些模型，并为它们创建独立分组
+                    for (const modelId of modelsToRemove) {
+                        // 从原分组中移除
+                        for (const [gid, gModels] of groupMap) {
+                            const idx = gModels.findIndex(m => m.modelId === modelId);
+                            if (idx !== -1) {
+                                const [removedModel] = gModels.splice(idx, 1);
+                                // 创建独立分组
+                                groupMap.set(modelId, [removedModel]);
+                                break;
+                            }
                         }
-                        groupMap.get(groupId)!.push(model);
                     }
                     
-                    logger.info(`[AutoGroup] Re-grouped ${Object.keys(newMappings).length} models`);
+                    // 清理空的分组
+                    for (const [gid, gModels] of groupMap) {
+                        if (gModels.length === 0) {
+                            groupMap.delete(gid);
+                        }
+                    }
+                    
+                    logger.info(`[GroupCheck] Removed ${modelsToRemove.length} models from groups due to quota mismatch`);
                 }
             } else {
                 // 没有存储的映射，每个模型单独一组

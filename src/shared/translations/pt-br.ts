@@ -106,11 +106,36 @@ export const ptBR = {
     'grouping.autoGroupHint': 'Recalcular grupos com base na cota atual',
     'grouping.description': 'Este modo agrega modelos que compartilham a mesma cota. Suporta renomear, ordenar e sincronização com a barra de status. Clique em "Agrupar Auto" para categorizar inteligentemente, ou alterne "Grupos de Cota" acima para voltar.',
 
+    // Agrupamento Personalizado
+    'customGrouping.title': 'Gerenciar Grupos',
+    'customGrouping.hint': 'Apenas modelos com a mesma cota e tempo de reinício podem ser agrupados. Os modelos serão removidos automaticamente do grupo se as alterações de cota causarem inconsistência.',
+    'customGrouping.smartGroup': 'Agrupar Auto',
+    'customGrouping.smartGroupHint': 'Categorizar automaticamente modelos com base na cota atual',
+    'customGrouping.addGroup': 'Adicionar Grupo',
+    'customGrouping.groupList': 'Lista de Grupos',
+    'customGrouping.ungrouped': 'Modelos Não Agrupados',
+    'customGrouping.ungroupedHint': 'Clique para adicionar ao grupo',
+    'customGrouping.addModel': 'Adicionar Modelos',
+    'customGrouping.removeModel': 'Remover',
+    'customGrouping.deleteGroup': 'Excluir Grupo',
+    'customGrouping.renameGroup': 'Renomear',
+    'customGrouping.save': 'Salvar Grupos',
+    'customGrouping.cancel': 'Cancelar',
+    'customGrouping.noModels': 'Nenhum modelo disponível',
+    'customGrouping.quotaMismatch': 'Inconsistência de Cota',
+    'customGrouping.resetMismatch': 'Inconsistência de Tempo de Reinício',
+    'customGrouping.saved': 'Grupos salvos com sucesso',
+    'customGrouping.emptyGroupWarning': 'Existem grupos vazios. Continuar salvando?',
+
     // Renomear Modelo
     'model.rename': 'Renomear Modelo',
+    'model.renameTitle': 'Renomear',
     'model.renamePrompt': 'Digite o novo nome para este modelo:',
     'model.renamed': 'Modelo renomeado para {name}',
     'model.nameEmpty': 'O nome não pode estar vazio',
+    'model.newName': 'Novo Nome',
+    'model.namePlaceholder': 'Digite o nome...',
+    'model.ok': 'OK',
     'model.reset': 'Redefinir',
 
     // Formato da Barra de Status

@@ -106,11 +106,36 @@ export const tr = {
     'grouping.autoGroupHint': 'Mevcut kotaya göre grupları yeniden hesapla',
     'grouping.description': 'Bu mod aynı kotayı paylaşan modelleri bir araya getirir. Yeniden adlandırma, sıralama ve durum çubuğu senkronizasyonunu destekler. Akıllıca kategorize etmek için "Otomatik Grupla"ya tıklayın veya geri dönmek için üstteki "Kota Grupları"nı değiştirin.',
 
+    // Özel Gruplandırma
+    'customGrouping.title': 'Grupları Yönet',
+    'customGrouping.hint': 'Yalnızca aynı kotaya ve sıfırlama süresine sahip modeller gruplandırılabilir. Kota değişiklikleri tutarsızlığa neden olursa modeller otomatik olarak gruptan çıkarılacaktır.',
+    'customGrouping.smartGroup': 'Otomatik Grupla',
+    'customGrouping.smartGroupHint': 'Modelleri mevcut kotaya göre otomatik olarak kategorize et',
+    'customGrouping.addGroup': 'Grup Ekle',
+    'customGrouping.groupList': 'Grup Listesi',
+    'customGrouping.ungrouped': 'Gruplandırılmamış Modeller',
+    'customGrouping.ungroupedHint': 'Gruba eklemek için tıklayın',
+    'customGrouping.addModel': 'Model Ekle',
+    'customGrouping.removeModel': 'Kaldır',
+    'customGrouping.deleteGroup': 'Grubu Sil',
+    'customGrouping.renameGroup': 'Yeniden Adlandır',
+    'customGrouping.save': 'Grupları Kaydet',
+    'customGrouping.cancel': 'İptal',
+    'customGrouping.noModels': 'Kullanılabilir model yok',
+    'customGrouping.quotaMismatch': 'Kota Uyumsuzluğu',
+    'customGrouping.resetMismatch': 'Sıfırlama Süresi Uyumsuzluğu',
+    'customGrouping.saved': 'Gruplar başarıyla kaydedildi',
+    'customGrouping.emptyGroupWarning': 'Boş gruplar var. Kaydetmeye devam edilsin mi?',
+
     // Model Yeniden Adlandırma
     'model.rename': 'Modeli Yeniden Adlandır',
+    'model.renameTitle': 'Yeniden Adlandır',
     'model.renamePrompt': 'Bu model için yeni bir ad girin:',
     'model.renamed': 'Model {name} olarak yeniden adlandırıldı',
     'model.nameEmpty': 'Ad boş olamaz',
+    'model.newName': 'Yeni Ad',
+    'model.namePlaceholder': 'Ad girin...',
+    'model.ok': 'Tamam',
     'model.reset': 'Sıfırla',
 
     // Durum Çubuğu Formatı

@@ -106,11 +106,36 @@ export const ja = {
     'grouping.autoGroupHint': '現在のクォータに基づいてグループを再計算',
     'grouping.description': 'このモードは同じクォータを共有するモデルを集約します。名前変更、並び替え、ステータスバー同期をサポート。「自動グループ化」で自動分類、または上の「クォータグループ」で戻ります。',
 
+    // Custom Grouping
+    'customGrouping.title': 'グループ管理',
+    'customGrouping.hint': 'クォータとリセット時間が同じモデルのみを同じグループに含めることができます。クォータの変更により不一致が生じた場合、モデルは自動的にグループから削除されます。',
+    'customGrouping.smartGroup': '自動グループ化',
+    'customGrouping.smartGroupHint': '現在のクォータに基づいてモデルを自動的に分類します',
+    'customGrouping.addGroup': 'グループを追加',
+    'customGrouping.groupList': 'グループ一覧',
+    'customGrouping.ungrouped': '未分類のモデル',
+    'customGrouping.ungroupedHint': 'クリックしてグループに追加',
+    'customGrouping.addModel': 'モデルを追加',
+    'customGrouping.removeModel': 'モデルを削除',
+    'customGrouping.deleteGroup': 'グループを削除',
+    'customGrouping.renameGroup': '名前変更',
+    'customGrouping.save': 'グループを保存',
+    'customGrouping.cancel': 'キャンセル',
+    'customGrouping.noModels': '利用可能なモデルはありません',
+    'customGrouping.quotaMismatch': 'クォータの不一致',
+    'customGrouping.resetMismatch': 'リセット時間の不一致',
+    'customGrouping.saved': 'グループを保存しました',
+    'customGrouping.emptyGroupWarning': '空のグループが存在します。保存を続行しますか？',
+
     // モデル名変更
     'model.rename': 'モデル名を変更',
+    'model.renameTitle': '名前変更',
     'model.renamePrompt': 'モデルの新しい名前を入力:',
     'model.renamed': 'モデル名を {name} に変更しました',
     'model.nameEmpty': '名前は空にできません',
+    'model.newName': '新しい名前',
+    'model.namePlaceholder': '名前を入力...',
+    'model.ok': '確定',
     'model.reset': 'リセット',
 
     // ステータスバー形式

@@ -8,6 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [1.5.46]
+
+### Added
+- **Custom Grouping**: New "Manage Groups" modal for manual group management
+  - Create, rename, and delete custom groups
+  - Add/remove models to groups with multi-select support
+  - Compatible models sorted first; incompatible models dynamically disabled
+  - "Auto Group" button to pre-fill groups based on quota (preserves existing group names via majority vote)
+  - Quota validation: only models with same quota and reset time can be grouped
+  - Models auto-removed from group when quota changes cause inconsistency (minority models removed, majority retained)
+
+### Improved
+- **Toast Notifications**: Now displayed above all modals (z-index: 9999)
+- **Privacy**: Telemetry and error reporting are now **disabled by default**. Users can manually enable them in settings (`agCockpit.telemetryEnabled`) if they wish to help improve the extension.
+
 ## [1.5.45]
 
 ### Refactor

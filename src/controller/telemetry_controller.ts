@@ -87,6 +87,7 @@ export class TelemetryController {
                 viewMode: config.viewMode,
                 displayMode: config.displayMode,
                 dataMasked: config.dataMasked,
+                groupMappings: config.groupMappings,
             });
 
             // 更新 QuickPick 视图数据

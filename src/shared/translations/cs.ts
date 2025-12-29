@@ -106,11 +106,36 @@ export const cs = {
     'grouping.autoGroupHint': 'Přepočítat skupiny na základě aktuální kvóty',
     'grouping.description': 'Tento režim agreguje modely sdílející stejnou kvótu. Podporuje přejmenování, řazení a synchronizaci se stavovým řádkem. Klikněte na "Auto Seskupování" pro inteligentní kategorizaci, nebo přepněte "Skupiny Kvót" výše pro návrat.',
 
+    // Vlastní Seskupování
+    'customGrouping.title': 'Spravovat Skupiny',
+    'customGrouping.hint': 'Pouze modely se stejnou kvótou a časem resetu mohou být seskupeny. Modely budou automaticky odebrány ze skupiny, pokud změny kvóty způsobí nekonzistenci.',
+    'customGrouping.smartGroup': 'Auto Seskupování',
+    'customGrouping.smartGroupHint': 'Automaticky kategorizovat modely na základě aktuální kvóty',
+    'customGrouping.addGroup': 'Přidat Skupinu',
+    'customGrouping.groupList': 'Seznam Skupin',
+    'customGrouping.ungrouped': 'Neseskupené Modely',
+    'customGrouping.ungroupedHint': 'Klikněte pro přidání do skupiny',
+    'customGrouping.addModel': 'Přidat Modely',
+    'customGrouping.removeModel': 'Odebrat',
+    'customGrouping.deleteGroup': 'Smazat Skupinu',
+    'customGrouping.renameGroup': 'Přejmenovat',
+    'customGrouping.save': 'Uložit Skupiny',
+    'customGrouping.cancel': 'Zrušit',
+    'customGrouping.noModels': 'Žádné modely k dispozici',
+    'customGrouping.quotaMismatch': 'Nekonzistence Kvóty',
+    'customGrouping.resetMismatch': 'Nekonzistence Času Resetu',
+    'customGrouping.saved': 'Skupiny úspěšně uloženy',
+    'customGrouping.emptyGroupWarning': 'Existují prázdné skupiny. Pokračovat v ukládání?',
+
     // Přejmenování Modelu
     'model.rename': 'Přejmenovat Model',
+    'model.renameTitle': 'Přejmenovat',
     'model.renamePrompt': 'Zadejte nový název pro tento model:',
     'model.renamed': 'Model přejmenován na {name}',
     'model.nameEmpty': 'Název nemůže být prázdný',
+    'model.newName': 'Nový název',
+    'model.namePlaceholder': 'Zadejte název...',
+    'model.ok': 'OK',
     'model.reset': 'Resetovat',
 
     // Formát Stavového Řádku

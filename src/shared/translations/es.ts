@@ -106,11 +106,36 @@ export const es = {
     'grouping.autoGroupHint': 'Recalcular grupos según la cuota actual',
     'grouping.description': 'Este modo agrega modelos que comparten la misma cuota. Soporta renombrar, ordenar y sincronización con la barra de estado. Haga clic en "Agrupar Auto" para categorizar inteligentemente, o alterne "Grupos de Cuota" arriba para volver.',
 
+    // Agrupación Personalizada
+    'customGrouping.title': 'Gestionar Grupos',
+    'customGrouping.hint': 'Solo modelos con la misma cuota y hora de reinicio pueden agruparse. Los modelos se eliminarán automáticamente del grupo si los cambios de cuota causan inconsistencia.',
+    'customGrouping.smartGroup': 'Agrupar Auto',
+    'customGrouping.smartGroupHint': 'Categorizar automáticamente modelos según la cuota actual',
+    'customGrouping.addGroup': 'Añadir Grupo',
+    'customGrouping.groupList': 'Lista de Grupos',
+    'customGrouping.ungrouped': 'Modelos No Agrupados',
+    'customGrouping.ungroupedHint': 'Clic para añadir al grupo',
+    'customGrouping.addModel': 'Añadir Modelos',
+    'customGrouping.removeModel': 'Eliminar',
+    'customGrouping.deleteGroup': 'Eliminar Grupo',
+    'customGrouping.renameGroup': 'Renombrar',
+    'customGrouping.save': 'Guardar Grupos',
+    'customGrouping.cancel': 'Cancelar',
+    'customGrouping.noModels': 'No hay modelos disponibles',
+    'customGrouping.quotaMismatch': 'Inconsistencia de Cuota',
+    'customGrouping.resetMismatch': 'Inconsistencia de Hora de Reinicio',
+    'customGrouping.saved': 'Grupos guardados con éxito',
+    'customGrouping.emptyGroupWarning': 'Existen grupos vacíos. ¿Continuar guardando?',
+
     // Renombrar Modelo
     'model.rename': 'Renombrar Modelo',
+    'model.renameTitle': 'Renombrar',
     'model.renamePrompt': 'Ingrese el nuevo nombre para este modelo:',
     'model.renamed': 'Modelo renombrado a {name}',
     'model.nameEmpty': 'El nombre no puede estar vacío',
+    'model.newName': 'Nuevo Nombre',
+    'model.namePlaceholder': 'Ingrese nombre...',
+    'model.ok': 'Aceptar',
     'model.reset': 'Restablecer',
 
     // Formato de Barra de Estado

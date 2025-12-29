@@ -106,11 +106,36 @@ export const zhTW = {
     'grouping.autoGroupHint': '根據目前配額重新計算分組',
     'grouping.description': '此模式將共享配額的模型聚合展示，支援重新命名、排序並同步至狀態列。您可以點擊右側「自動分組」智慧歸類，或點擊上方「配額分組」切換回全部模型檢視。',
 
+    // Custom Grouping
+    'customGrouping.title': '分組管理',
+    'customGrouping.hint': '只有配額和重置時間相同的模型可歸入同一分組。當配額變化導致不一致時，不符合的模型會被自動移出分組。',
+    'customGrouping.smartGroup': '自動分組',
+    'customGrouping.smartGroupHint': '根據當前配額自動歸類模型',
+    'customGrouping.addGroup': '添加分組',
+    'customGrouping.groupList': '分組列表',
+    'customGrouping.ungrouped': '未分組模型',
+    'customGrouping.ungroupedHint': '點擊可添加到分組',
+    'customGrouping.addModel': '添加模型',
+    'customGrouping.removeModel': '移除',
+    'customGrouping.deleteGroup': '刪除分組',
+    'customGrouping.renameGroup': '重新命名',
+    'customGrouping.save': '保存分組',
+    'customGrouping.cancel': '取消',
+    'customGrouping.noModels': '暫無可用的模型',
+    'customGrouping.quotaMismatch': '配額不一致',
+    'customGrouping.resetMismatch': '重置時間不一致',
+    'customGrouping.saved': '分組已保存',
+    'customGrouping.emptyGroupWarning': '存在空分組，是否繼續保存？',
+
     // 模型重新命名
     'model.rename': '重新命名模型',
+    'model.renameTitle': '重新命名',
     'model.renamePrompt': '請輸入新的模型名稱:',
     'model.renamed': '模型已重新命名為 {name}',
     'model.nameEmpty': '名稱不能為空',
+    'model.newName': '新名稱',
+    'model.namePlaceholder': '輸入名稱...',
+    'model.ok': '確定',
     'model.reset': '重置',
 
     // 狀態列格式
