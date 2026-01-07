@@ -79,6 +79,17 @@ Each model / group shows:
 
 ---
 
+### Quota Source (Local / Authorized)
+
+Two quota sources are available, and you can switch from the top-right of the panel at any time:
+
+- **Local Monitoring**: Reads from the local Antigravity client process; more stable but requires the client to stay running
+- **Authorized Monitoring**: Fetches quota via authorized remote APIs, independent of the local process; ideal for API relays or headless usage
+- **Multi-account Authorization**: Authorized monitoring supports multiple accounts with account switching and status badges
+- **Switching Tips**: Shows loading/timeout hints during switches; you can switch back to local if the network is unstable
+
+---
+
 ### Model Capabilities Tooltip
 
 ![Model Capabilities Tooltip](assets/model_capabilities_tooltip.png)
@@ -150,6 +161,8 @@ Sends notifications when model quota falls below warning threshold or is exhaust
 
 - **Flexible Scheduling**: Supports daily, weekly, interval, and advanced Crontab modes
 - **Multi-Model Support**: Wake up multiple models simultaneously
+- **Multi-Account Authorization**: Authorize multiple accounts, switch active account, and view account status
+- **Account Management**: Manage accounts with reauthorize/remove actions
 - **Secure**: Credentials encrypted in VS Code Secret Storage, running locally
 - **History**: View detailed trigger logs and AI responses
 - **Use Case**: Wake up before work to run through the reset cooldown during idle time
