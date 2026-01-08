@@ -238,8 +238,8 @@ npm run package
 
 作者新建了技术交流群，目前人还不多，欢迎加入！
 
-| 微信群（总群 扫码进不去加好友拉群） | 微信号（个人名片） |
-| :---: |
+| 微信群（1群已满 扫码进2群 或者加微信拉进1群） | 微信号（个人名片） |
+| :---: | :---: |
 | <img src="docs/wechat_group_qr.png" width="200" /> | <img src="docs/wechat_info.png" width="200" /> |
 
 微信号：lijie_agent
