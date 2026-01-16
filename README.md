@@ -247,7 +247,7 @@ npm run package
 
 | 微信群（1、2、3、4群已满 扫码进5群 或者加微信拉进1群，暂不支持拉人进群了 被封两个号了）
 | :---: |
-| <img src="docs/wechat_group_qr4.png" width="200" /> 
+| <img src="docs/wechat_group_qr5.png" width="200" /> 
 
 ---
 
