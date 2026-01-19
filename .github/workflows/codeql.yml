@@ -1,3 +1,7 @@
+# CodeQL Security Scanning
+# This workflow performs code security analysis using GitHub CodeQL
+# Thanks to @ignCostaisa for the initial contribution (#40)
+
 name: "CodeQL"
 
 on:
@@ -6,6 +10,7 @@ on:
   pull_request:
     branches: [ "main" ]
   schedule:
+    # Run weekly on Wednesday at 14:28 UTC
     - cron: '28 14 * * 3'
 
 jobs:
@@ -20,19 +25,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'javascript', 'python' ] # Ajusta esto a los lenguajes del repo
+        language: [ 'javascript-typescript' ]
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
 
     - name: Autobuild
-      uses: github/codeql-action/autobuild@v2
+      uses: github/codeql-action/autobuild@v3
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      uses: github/codeql-action/analyze@v3
