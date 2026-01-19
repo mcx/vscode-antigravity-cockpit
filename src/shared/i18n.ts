@@ -4,7 +4,7 @@
  */
 
 import * as vscode from 'vscode';
-import { en, zhCN, ja, es, de, fr, ptBR, ru, ko, it, zhTW, tr, pl, cs, ar } from './translations';
+import { en, zhCN, ja, es, de, fr, ptBR, ru, ko, it, zhTW, tr, pl, cs, ar, vi } from './translations';
 
 /** 支持的语言 */
 export type SupportedLocale = 
@@ -22,7 +22,8 @@ export type SupportedLocale =
     | 'tr' 
     | 'pl' 
     | 'cs'
-    | 'ar';
+    | 'ar'
+    | 'vi';
 
 /** 语言显示名称映射 */
 export const localeDisplayNames: Record<SupportedLocale, string> = {
@@ -41,6 +42,7 @@ export const localeDisplayNames: Record<SupportedLocale, string> = {
     'pl': 'Polski',
     'cs': 'Čeština',
     'ar': 'اللغة العربية',
+    'vi': 'Tiếng Việt',
 };
 
 /** 翻译键值对 */
@@ -65,6 +67,7 @@ const translations: Record<SupportedLocale, TranslationMap> = {
     'pl': pl,
     'cs': cs,
     'ar': ar,
+    'vi': vi,
 };
 
 /** 语言代码映射 - 将 VSCode 语言代码映射到我们支持的语言 */
@@ -89,6 +92,8 @@ const localeMapping: Record<string, SupportedLocale> = {
     'pl': 'pl',
     'cs': 'cs',
     'ar': 'ar',
+    'vi': 'vi',
+    'vi-vn': 'vi',
 };
 
 /** i18n 服务类 */
