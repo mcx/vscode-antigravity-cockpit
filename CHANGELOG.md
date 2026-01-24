@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.0.2] - 2026-01-24
+
+### Fixed
+- **Auto Wake-up**: Fixed multi-account quota reset detection logic. The system now independently checks the quota status of all selected accounts, not just the active account.
+
+### Added
+- **Automated Release Workflow**: Configured GitHub Actions workflow to automatically publish to Open VSX Registry when version tags are pushed.
+- **One-Click Release Script**: Added one-click release script that automates version number updates, compilation, packaging, tag creation, and push process.
+
 ## [2.0.1]
 
 ### Improved

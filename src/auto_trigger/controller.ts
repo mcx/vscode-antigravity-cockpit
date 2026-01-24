@@ -18,6 +18,17 @@ import {
 import { logger } from '../shared/log_service';
 import { t } from '../shared/i18n';
 
+/**
+ * 带有配额信息的模型（用于配额重置检测）
+ */
+interface QuotaModelInfo {
+    id: string;
+    displayName: string;
+    modelConstant: string;
+    resetTime?: Date;
+    remainingFraction?: number;
+}
+
 // 存储键
 const SCHEDULE_CONFIG_KEY = 'scheduleConfig';
 
@@ -509,12 +520,12 @@ class AutoTriggerController {
     }
 
     /**
-     * 检查配额重置并自动触发唤醒
-     * 由 ReactorCore 在配额刷新后调用
-     * @param models 模型配额信息数组
+     * 检查配额重置并自动触发唤醒（多账号独立检测版本）
+     * 遍历所有选中账号，为每个账号独立获取配额并检测
+     * 由定时刷新或手动触发调用
      */
-    async checkAndTriggerOnQuotaReset(models: Array<{ id: string; resetAt?: string; remaining: number; limit: number }>): Promise<void> {
-        logger.debug(`[AutoTriggerController] checkAndTriggerOnQuotaReset called, models count: ${models.length}`);
+    async checkAndTriggerOnQuotaReset(): Promise<void> {
+        logger.debug('[AutoTriggerController] checkAndTriggerOnQuotaReset called (multi-account)');
 
         // 获取调度配置
         const schedule = credentialStorage.getState<ScheduleConfig>(SCHEDULE_CONFIG_KEY, {
@@ -524,7 +535,7 @@ class AutoTriggerController {
             maxOutputTokens: 0,
         });
 
-        logger.debug(`[AutoTriggerController] Schedule config: enabled=${schedule.enabled}, wakeOnReset=${schedule.wakeOnReset}, selectedModels=${JSON.stringify(schedule.selectedModels)}`);
+        logger.debug(`[AutoTriggerController] Schedule config: enabled=${schedule.enabled}, wakeOnReset=${schedule.wakeOnReset}, selectedAccounts=${JSON.stringify(schedule.selectedAccounts)}, selectedModels=${JSON.stringify(schedule.selectedModels)}`);
 
         if (!schedule.enabled) {
             logger.debug('[AutoTriggerController] Wake-up disabled, skipping');
@@ -546,62 +557,109 @@ class AutoTriggerController {
             }
         }
 
+        // 获取所有选中的账号
         const accounts = await this.resolveScheduleAccounts(schedule);
         if (accounts.length === 0) {
-            logger.debug('[AutoTriggerController] Wake on reset: Not authorized, skipping');
+            logger.debug('[AutoTriggerController] Wake on reset: No valid accounts, skipping');
             return;
         }
 
-        // 检查每个选中的模型是否需要触发
         const selectedModels = schedule.selectedModels || [];
-        const modelsToTrigger: string[] = [];
-
-        logger.debug(`[AutoTriggerController] Checking ${selectedModels.length} selected models`);
-        logger.debug(`[AutoTriggerController] Available model constants in quota: ${models.map(m => m.id).join(', ')}`);
-        logger.debug(`[AutoTriggerController] modelIdToConstant map size: ${this.modelIdToConstant.size}`);
-
-        for (const modelId of selectedModels) {
-            // 将用户选择的 ID 转换为 modelConstant
-            const modelConstant = this.modelIdToConstant.get(modelId);
-            logger.debug(`[AutoTriggerController] Model ${modelId} -> constant: ${modelConstant || 'NOT FOUND'}`);
-
-            if (!modelConstant) {
-                logger.debug(`[AutoTriggerController] Model ${modelId} has no constant mapping, trying direct match`);
-            }
-
-            // 先用 modelConstant 查找，找不到再用原始 ID
-            const modelQuota = models.find(m => m.id === modelConstant) || models.find(m => m.id === modelId);
-            if (!modelQuota) {
-                logger.debug(`[AutoTriggerController] Model ${modelId} not found in quota data`);
-                continue;
-            }
-            if (!modelQuota.resetAt) {
-                logger.debug(`[AutoTriggerController] Model ${modelId} has no resetAt`);
-                continue;
-            }
-
-            logger.debug(`[AutoTriggerController] Model ${modelId}: remaining=${modelQuota.remaining}, limit=${modelQuota.limit}, resetAt=${modelQuota.resetAt}`);
-
-            // 检查是否应该触发 - 使用 modelConstant 作为 key 来避免重复触发
-            const triggerKey = modelConstant || modelId;
-            if (triggerService.shouldTriggerOnReset(triggerKey, modelQuota.resetAt, modelQuota.remaining, modelQuota.limit)) {
-                logger.debug(`[AutoTriggerController] Model ${modelId} should trigger!`);
-                modelsToTrigger.push(modelId);
-                // 立即标记已触发，防止重复
-                triggerService.markResetTriggered(triggerKey, modelQuota.resetAt);
-            } else {
-                logger.debug(`[AutoTriggerController] Model ${modelId} should NOT trigger`);
-            }
-        }
-
-        if (modelsToTrigger.length === 0) {
-            logger.debug('[AutoTriggerController] No models to trigger');
+        if (selectedModels.length === 0) {
+            logger.debug('[AutoTriggerController] Wake on reset: No models selected, skipping');
             return;
         }
 
-        // 触发唤醒
-        logger.info(`[AutoTriggerController] Wake on reset: Triggering for models: ${modelsToTrigger.join(', ')}`);
+        logger.info(`[AutoTriggerController] Wake on reset: Checking ${accounts.length} accounts, ${selectedModels.length} models`);
+
+        // 遍历每个选中的账号，独立检测配额
         for (const email of accounts) {
+            await this.checkAndTriggerForAccount(email, schedule, selectedModels);
+        }
+    }
+
+    /**
+     * 为单个账号检查配额并触发唤醒
+     * @param email 账号邮箱
+     * @param schedule 调度配置
+     * @param selectedModels 选中的模型列表
+     */
+    private async checkAndTriggerForAccount(
+        email: string,
+        schedule: ScheduleConfig,
+        selectedModels: string[],
+    ): Promise<void> {
+        logger.debug(`[AutoTriggerController] Checking quota for account: ${email}`);
+
+        try {
+            // 获取该账号的配额数据
+            const models = await this.fetchQuotaModelsForAccount(email);
+            if (!models || models.length === 0) {
+                logger.debug(`[AutoTriggerController] No quota data for ${email}, skipping`);
+                return;
+            }
+
+            // 构建模型 ID 到配额的映射
+            const quotaMap = new Map<string, { id: string; resetAt?: string; remaining: number; limit: number }>();
+            for (const model of models) {
+                if (!model.modelConstant) {
+                    continue;
+                }
+                const resetAtMs = model.resetTime?.getTime();
+                if (!resetAtMs || Number.isNaN(resetAtMs)) {
+                    continue;
+                }
+                
+                quotaMap.set(model.modelConstant, {
+                    id: model.modelConstant,
+                    resetAt: model.resetTime!.toISOString(),
+                    remaining: model.remainingFraction !== undefined ? Math.floor(model.remainingFraction * 100) : 0,
+                    limit: 100,  // 使用百分比，limit 固定为 100
+                });
+                // 同时用模型 ID 作为 key
+                if (model.id) {
+                    quotaMap.set(model.id, quotaMap.get(model.modelConstant)!);
+                }
+            }
+
+            // 检查每个选中的模型是否需要触发
+            const modelsToTrigger: string[] = [];
+
+            for (const modelId of selectedModels) {
+                const modelConstant = this.modelIdToConstant.get(modelId);
+                const triggerKey = `${email}:${modelConstant || modelId}`;
+
+                // 查找配额数据
+                const modelQuota = quotaMap.get(modelConstant || '') || quotaMap.get(modelId);
+                if (!modelQuota) {
+                    logger.debug(`[AutoTriggerController] Model ${modelId} not found in quota for ${email}`);
+                    continue;
+                }
+                if (!modelQuota.resetAt) {
+                    logger.debug(`[AutoTriggerController] Model ${modelId} has no resetAt for ${email}`);
+                    continue;
+                }
+
+                logger.debug(`[AutoTriggerController] [${email}] Model ${modelId}: remaining=${modelQuota.remaining}%, resetAt=${modelQuota.resetAt}`);
+
+                // 检查是否应该触发 - 使用 email:modelConstant 作为 key 来区分不同账号
+                if (triggerService.shouldTriggerOnReset(triggerKey, modelQuota.resetAt, modelQuota.remaining, modelQuota.limit)) {
+                    logger.debug(`[AutoTriggerController] [${email}] Model ${modelId} should trigger!`);
+                    modelsToTrigger.push(modelId);
+                    // 立即标记已触发，防止重复
+                    triggerService.markResetTriggered(triggerKey, modelQuota.resetAt);
+                } else {
+                    logger.debug(`[AutoTriggerController] [${email}] Model ${modelId} should NOT trigger`);
+                }
+            }
+
+            if (modelsToTrigger.length === 0) {
+                logger.debug(`[AutoTriggerController] [${email}] No models to trigger`);
+                return;
+            }
+
+            // 触发唤醒
+            logger.info(`[AutoTriggerController] Wake on reset: Triggering ${email} for models: ${modelsToTrigger.join(', ')}`);
             const result = await triggerService.trigger(
                 modelsToTrigger,
                 'auto',
@@ -616,10 +674,73 @@ class AutoTriggerController {
             } else {
                 logger.error(`[AutoTriggerController] Wake on reset: Trigger failed for ${email}: ${result.message}`);
             }
+        } catch (err) {
+            const error = err instanceof Error ? err.message : String(err);
+            logger.warn(`[AutoTriggerController] Failed to check quota for ${email}: ${error}`);
         }
 
         // 通知 UI 更新
         this.notifyStateUpdate();
+    }
+
+    /**
+     * 获取指定账号的配额模型列表
+     * @param email 账号邮箱
+     * @returns 带有配额信息的模型列表
+     */
+    private async fetchQuotaModelsForAccount(email: string): Promise<QuotaModelInfo[] | null> {
+        try {
+            // 获取该账号的 token
+            const tokenResult = await oauthService.getAccessTokenStatusForAccount(email);
+            if (tokenResult.state !== 'ok' || !tokenResult.token) {
+                logger.debug(`[AutoTriggerController] Token unavailable for ${email}: ${tokenResult.state}`);
+                return null;
+            }
+
+            // 获取 projectId
+            const credential = await credentialStorage.getCredentialForAccount(email);
+            const projectId = credential?.projectId;
+
+            // 获取配额模型（复用 triggerService 的方法）
+            await triggerService.fetchAvailableModels(this.quotaModelConstants);
+            
+            // 注意：这里需要通过真正的配额 API 获取带有 resetTime 的模型数据
+            // 使用 cloudCodeClient 获取完整配额信息
+            const { cloudCodeClient } = await import('../shared/cloudcode_client');
+            const quotaData = await cloudCodeClient.fetchAvailableModels(
+                tokenResult.token,
+                projectId,
+                { logLabel: 'AutoTriggerController', timeoutMs: 30000 },
+            );
+
+            if (!quotaData?.models) {
+                return null;
+            }
+
+            // 转换为 QuotaModelInfo 格式，包含 resetTime
+            const result: QuotaModelInfo[] = [];
+            for (const [id, info] of Object.entries(quotaData.models)) {
+                const quotaInfo = (info as { quotaInfo?: { remainingFraction?: number; resetTime?: string } }).quotaInfo;
+                const resetTimeStr = quotaInfo?.resetTime;
+                const resetTime = resetTimeStr ? new Date(resetTimeStr) : undefined;
+                const remainingFraction = quotaInfo?.remainingFraction;
+
+                result.push({
+                    id,
+                    displayName: (info as { displayName?: string }).displayName || id,
+                    modelConstant: (info as { model?: string }).model || '',
+                    resetTime,
+                    remainingFraction,
+                });
+            }
+
+            logger.debug(`[AutoTriggerController] Fetched ${result.length} models for ${email}`);
+            return result;
+        } catch (err) {
+            const error = err instanceof Error ? err.message : String(err);
+            logger.warn(`[AutoTriggerController] Failed to fetch quota models for ${email}: ${error}`);
+            return null;
+        }
     }
 
     /**

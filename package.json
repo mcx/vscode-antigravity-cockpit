@@ -3,7 +3,7 @@
   "displayName": "Antigravity Cockpit",
   "icon": "assets/icon.png",
   "description": "A premium, dashboard-style quota monitor for Antigravity AI.",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "publisher": "jlcodes",
   "engines": {
     "vscode": "^1.90.0"
@@ -337,7 +337,9 @@
     "lint:webview": "eslint src/view/webview/*.js",
     "package": "npx vsce package",
     "test": "jest",
-    "pretest": "npm run compile"
+    "pretest": "npm run compile",
+    "postinstall": "bash scripts/install-hooks.sh",
+    "release": "bash scripts/release.sh"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

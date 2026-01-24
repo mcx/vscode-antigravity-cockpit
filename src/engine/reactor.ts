@@ -130,6 +130,8 @@ export class ReactorCore {
     private localAccountEmail?: string;
     /** 本地模式是否使用远端 API */
     private localUsingRemoteApi: boolean = false;
+    /** 当前用户在 Antigravity 中选中的模型 ID */
+    private activeModelId?: string;
 
     constructor() {
         logger.debug('ReactorCore Online');
@@ -150,6 +152,21 @@ export class ReactorCore {
      */
     getLatestSnapshot(): QuotaSnapshot | undefined {
         return this.lastSnapshot;
+    }
+
+    setActiveModelId(modelId?: string): void {
+        const normalized = modelId?.trim();
+        const next = normalized && normalized.length > 0 ? normalized : undefined;
+        if (this.activeModelId === next) {
+            return;
+        }
+        this.activeModelId = next;
+        if (this.lastSnapshot) {
+            this.lastSnapshot.activeModelId = next;
+        }
+        if (this.updateHandler) {
+            this.reprocess();
+        }
     }
 
     private formatCacheModels(models: ModelQuotaInfo[]): QuotaCacheModel[] {
@@ -743,6 +760,7 @@ export class ReactorCore {
                 return;
             }
         }
+        telemetry.activeModelId = this.activeModelId;
         this.lastSnapshot = telemetry; // Cache the latest snapshot
         if (source) {
             this.lastSnapshotSource = source;
@@ -768,11 +786,10 @@ export class ReactorCore {
         }
         
         // 检查配额重置并触发自动唤醒（异步执行，不阻塞主流程）
-        if (telemetry.models.length > 0) {
-            this.checkQuotaResetTrigger(telemetry.models).catch(err => {
-                logger.warn(`[ReactorCore] Wake on reset check failed: ${err}`);
-            });
-        }
+        // 注意：现在 checkQuotaResetTrigger 会自行获取每个选中账号的配额数据
+        this.checkQuotaResetTrigger().catch(err => {
+            logger.warn(`[ReactorCore] Wake on reset check failed: ${err}`);
+        });
     }
 
     /**
@@ -910,38 +927,12 @@ export class ReactorCore {
         models.sort((a, b) => a.label.localeCompare(b.label));
         return models;
     }
-    
     /**
      * 检查配额重置并触发自动唤醒
+     * 现在 AutoTriggerController 会自行遍历所有选中账号并获取配额
      */
-    private async checkQuotaResetTrigger(models: ModelQuotaInfo[]): Promise<void> {
-        // 构建检测所需的数据
-        const modelData = models
-            .filter(m => {
-                if (m.resetTimeValid === false) {
-                    logger.debug(`[ReactorCore] Skip wake on reset: invalid resetTime for ${m.label}`);
-                    return false;
-                }
-                const resetAtMs = m.resetTime.getTime();
-                if (Number.isNaN(resetAtMs)) {
-                    logger.warn(`[ReactorCore] Skip wake on reset: NaN resetTime for ${m.label}`);
-                    return false;
-                }
-                return true;
-            })
-            .map(m => ({
-                id: m.modelId,
-                resetAt: m.resetTime.toISOString(),
-                remaining: m.remainingFraction !== undefined ? Math.floor(m.remainingFraction * 100) : 0,
-                limit: 100,  // 使用百分比，limit 固定为 100
-            }));
-
-        if (modelData.length === 0) {
-            logger.debug('[ReactorCore] Wake on reset: no valid models to check');
-            return;
-        }
-
-        await autoTriggerController.checkAndTriggerOnQuotaReset(modelData);
+    private async checkQuotaResetTrigger(): Promise<void> {
+        await autoTriggerController.checkAndTriggerOnQuotaReset();
     }
 
     /**
