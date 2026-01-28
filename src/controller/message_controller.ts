@@ -891,7 +891,18 @@ export class MessageController {
                         const email = message.email;
                         logger.info(`[MsgCtrl] Switching account to: ${email}`);
                         if (!cockpitToolsWs.isConnected) {
-                            vscode.window.showWarningMessage(t('accountTree.cockpitToolsNotRunning'));
+                            const launchAction = t('accountTree.launchCockpitTools');
+                            const downloadAction = t('accountTree.downloadCockpitTools');
+                            const action = await vscode.window.showWarningMessage(
+                                t('accountTree.cockpitToolsNotRunning'),
+                                launchAction,
+                                downloadAction,
+                            );
+                            if (action === launchAction) {
+                                vscode.commands.executeCommand('agCockpit.accountTree.openManager');
+                            } else if (action === downloadAction) {
+                                vscode.env.openExternal(vscode.Uri.parse('https://github.com/jlcodes99/antigravity-cockpit-tools/releases'));
+                            }
                             return;
                         }
                         try {

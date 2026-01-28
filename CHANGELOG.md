@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.3] - 2026-01-28
+
+### Improved
+- **UX**: Enhanced the "Cockpit Tools Not Running" warning when switching accounts. Added "Launch" and "Download" buttons for quicker access to the manager tool.
+
 ## [2.1.2] - 2026-01-26
 
 ### Added
