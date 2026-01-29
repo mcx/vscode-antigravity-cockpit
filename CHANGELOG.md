@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.7]
+
+### Added
+- **Model display fallback**: Fill readable names for common model IDs when `displayName` is missing.
+
+### Changed
+- **Message flow**: Message/Retry flow now hooks into the account refresh service for consistent state updates.
+
 ## [2.1.6]
 
 ### Added

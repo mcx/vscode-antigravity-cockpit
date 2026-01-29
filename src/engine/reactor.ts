@@ -165,7 +165,7 @@ export class ReactorCore {
     private buildModelsFromCache(models: QuotaCacheModel[]): ModelQuotaInfo[] {
         const now = Date.now();
         return models.map((model) => {
-            const label = model.displayName || model.id;
+            const label = model.displayName || ReactorCore.getFallbackDisplayName(model.id) || model.id;
             const remainingPercentage = model.remainingPercentage ?? (
                 model.remainingFraction !== undefined ? model.remainingFraction * 100 : undefined
             );
@@ -196,6 +196,25 @@ export class ReactorCore {
                 supportedMimeTypes: model.supportedMimeTypes,
             };
         });
+    }
+
+    private static getFallbackDisplayName(id: string): string | undefined {
+        const key = id.toLowerCase();
+        const map: Record<string, string> = {
+            'claude-opus-4-5-thinking': 'Claude Opus 4.5 (Thinking)',
+            'claude-sonnet-4-5': 'Claude Sonnet 4.5',
+            'claude-sonnet-4-5-thinking': 'Claude Sonnet 4.5 (Thinking)',
+            'gemini-3-flash': 'Gemini 3 Flash',
+            'gemini-3-pro-high': 'Gemini 3 Pro (High)',
+            'gemini-3-pro-low': 'Gemini 3 Pro (Low)',
+            'gemini-3-pro-image': 'Gemini 3 Pro Image',
+            'gpt-oss-120b-medium': 'GPT-OSS 120B (Medium)',
+            'gemini-2.5-flash': 'Gemini 2.5 Flash',
+            'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite',
+            'gemini-2.5-flash-thinking': 'Gemini 2.5 Flash (Thinking)',
+            'gemini-2.5-pro': 'Gemini 2.5 Pro',
+        };
+        return map[key];
     }
 
     private async persistQuotaCache(

@@ -136,7 +136,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     // 初始化其他控制器
     _telemetryController = new TelemetryController(reactor, statusBar, hud, quickPickView, onRetry);
-    _messageController = new MessageController(context, hud, reactor, onRetry);
+    _messageController = new MessageController(context, hud, reactor, onRetry, accountsRefreshService);
     _commandController = new CommandController(context, hud, quickPickView, reactor, onRetry);
 
     // 初始化自动触发控制器
