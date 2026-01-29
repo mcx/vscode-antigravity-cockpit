@@ -150,11 +150,29 @@ export class MessageController {
                     logger.info('User triggered manual refresh');
                     // 尝试确保 WebSocket 连接（如果断开则触发重连）
                     cockpitToolsWs.ensureConnected();
-                    this.reactor.syncTelemetry();
-                    if (this.refreshService) {
-                        this.refreshService.refresh();
-                    }
+
                     {
+                        const config = configService.getConfig();
+                        let handled = false;
+
+                        if (config.quotaSource === 'authorized' && this.refreshService) {
+                            const activeEmail = await credentialStorage.getActiveAccount();
+                            if (activeEmail) {
+                                logger.info(`[MsgCtrl] Refreshing active account: ${activeEmail}`);
+                                // loadAccountQuota 内部使用 QuotaRefreshManager 并强制刷新 (forceRefresh=true)
+                                await this.refreshService.loadAccountQuota(activeEmail);
+                                handled = true;
+                            }
+                        }
+
+                        if (!handled) {
+                            // Local 模式或无活动账号，回落到原有逻辑
+                            this.reactor.syncTelemetry();
+                            if (this.refreshService) {
+                                this.refreshService.refresh();
+                            }
+                        }
+
                         const state = await autoTriggerController.getState();
                         this.hud.sendMessage({
                             type: 'autoTriggerState',

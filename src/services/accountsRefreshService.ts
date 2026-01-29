@@ -8,6 +8,7 @@ import { configService } from '../shared/config_service';
 import { QuotaSnapshot } from '../shared/types';
 import { t } from '../shared/i18n';
 import { recordQuotaHistory } from './quota_history';
+import { QuotaRefreshManager } from './quotaRefreshManager';
 
 export interface AccountQuotaCache {
     snapshot: QuotaSnapshot;
@@ -37,7 +38,7 @@ export class AccountsRefreshService {
     private initError: string | null = null;
     private toolsAvailable = false;
 
-    private refreshTimer?: ReturnType<typeof setInterval>;
+    private refreshTimer?: ReturnType<typeof setTimeout>;
     private lastManualRefresh = 0;
     private static readonly MANUAL_REFRESH_COOLDOWN_MS = 10000;
     private static readonly STARTUP_WS_WAIT_MS = 5000;
@@ -48,13 +49,17 @@ export class AccountsRefreshService {
     private readonly onDidUpdateEmitter = new vscode.EventEmitter<void>();
     readonly onDidUpdate = this.onDidUpdateEmitter.event;
 
+    /** 配额刷新管理器（统一入口） */
+    private readonly quotaRefreshManager: QuotaRefreshManager;
+
     constructor(private readonly reactor: ReactorCore) {
-        this.startAutoRefresh();
+        this.quotaRefreshManager = new QuotaRefreshManager(reactor);
+        this.scheduleNextAutoRefresh();
     }
 
     dispose(): void {
         if (this.refreshTimer) {
-            clearInterval(this.refreshTimer);
+            clearTimeout(this.refreshTimer);
             this.refreshTimer = undefined;
         }
         this.onDidUpdateEmitter.dispose();
@@ -191,13 +196,37 @@ export class AccountsRefreshService {
 
                 // 刷新配额（可选跳过）
                 if (!options?.skipQuotaRefresh) {
+                    const emails: string[] = [];
                     for (const [email, account] of this.accounts) {
                         if (!account.hasPluginCredential) {
                             this.setMissingCredentialCache(email);
                             continue;
                         }
-                        await this.silentLoadAccountQuota(email);
+                        if (account.isInvalid) {
+                            this.setErrorCache(email, account.invalidReason || t('accountsRefresh.authExpired'));
+                            continue;
+                        }
+                        emails.push(email);
                     }
+                    
+                    // 使用 QuotaRefreshManager 批量刷新（走文件缓存）
+                    const results = await this.quotaRefreshManager.refreshAccounts(emails, { reason: reason });
+                    
+                    // 将结果同步到内存缓存
+                    for (const [email, result] of results) {
+                        if (result.success && result.snapshot) {
+                            const cache: AccountQuotaCache = {
+                                snapshot: result.snapshot,
+                                fetchedAt: Date.now(),
+                                loading: false,
+                                error: undefined,
+                            };
+                            this.quotaCache.set(email, cache);
+                        } else if (!result.success) {
+                            this.setErrorCache(email, result.error || 'Unknown error');
+                        }
+                    }
+                    this.emitUpdate();
                 } else {
                     logger.info('[AccountsRefresh] 跳过配额刷新 (skipQuotaRefresh=true)');
                 }
@@ -233,18 +262,68 @@ export class AccountsRefreshService {
 
         this.isRefreshingQuotas = true;
         try {
+            // 使用 QuotaRefreshManager 批量刷新（走文件缓存）
+            const emails: string[] = [];
             for (const [email, account] of this.accounts) {
                 if (!account.hasPluginCredential) {
                     this.setMissingCredentialCache(email);
                     continue;
                 }
-                await this.silentLoadAccountQuota(email);
+                if (account.isInvalid) {
+                    this.setErrorCache(email, account.invalidReason || t('accountsRefresh.authExpired'));
+                    continue;
+                }
+                emails.push(email);
             }
+
+            const results = await this.quotaRefreshManager.refreshAccounts(emails, { reason: 'autoRefresh' });
+            
+            // 将结果同步到内存缓存
+            for (const [email, result] of results) {
+                if (result.success && result.snapshot) {
+                    const cache: AccountQuotaCache = {
+                        snapshot: result.snapshot,
+                        fetchedAt: Date.now(),
+                        loading: false,
+                        error: undefined,
+                    };
+                    this.quotaCache.set(email, cache);
+                } else if (!result.success) {
+                    this.setErrorCache(email, result.error || 'Unknown error');
+                    
+                    // 检查是否为授权失败
+                    if (result.error && this.isAuthError(result.error)) {
+                        const account = this.accounts.get(email);
+                        if (account) {
+                            account.isInvalid = true;
+                            account.invalidReason = t('accountsRefresh.authExpired');
+                        }
+                    }
+                }
+            }
+            
+            this.emitUpdate();
         } finally {
             this.isRefreshingQuotas = false;
         }
     }
 
+    /**
+     * 检查错误是否为授权失败
+     */
+    private isAuthError(error: string): boolean {
+        return error.includes('Authorization expired') 
+            || error.includes('invalid_grant')
+            || error.includes('401')
+            || error.includes('UNAUTHENTICATED')
+            || error.includes('invalid authentication credentials')
+            || error.includes('Expected OAuth 2 access token');
+    }
+
+    /**
+     * 加载单个账号的配额（强制刷新，忽略缓存）
+     * 用于：账号卡片点击刷新、主页面刷新按钮
+     */
     async loadAccountQuota(email: string): Promise<void> {
         const account = this.accounts.get(email);
         if (account && !account.hasPluginCredential) {
@@ -253,6 +332,7 @@ export class AccountsRefreshService {
             return;
         }
 
+        // 设置 loading 状态
         const cache = this.quotaCache.get(email) || {
             snapshot: { timestamp: new Date(), models: [], isConnected: false },
             fetchedAt: 0,
@@ -262,19 +342,30 @@ export class AccountsRefreshService {
         this.quotaCache.set(email, cache);
         this.emitUpdate();
 
-        try {
-            const snapshot = await this.reactor.fetchQuotaForAccount(email);
-            cache.snapshot = snapshot;
+        // 使用 QuotaRefreshManager 强制刷新（忽略缓存）
+        const result = await this.quotaRefreshManager.refreshAccount(email, {
+            forceRefresh: true,
+            reason: 'manualSingle',
+        });
+
+        if (result.success && result.snapshot) {
+            cache.snapshot = result.snapshot;
             cache.fetchedAt = Date.now();
             cache.loading = false;
             cache.error = undefined;
-            void recordQuotaHistory(email, snapshot);
-            logger.info(`[AccountsRefresh] Loaded quota for ${email}: ${snapshot.models.length} models, ${snapshot.groups?.length ?? 0} groups`);
-        } catch (err) {
-            const error = err instanceof Error ? err.message : String(err);
+            logger.info(`[AccountsRefresh] Loaded quota for ${email}: ${result.snapshot.models.length} models, ${result.snapshot.groups?.length ?? 0} groups`);
+        } else {
             cache.loading = false;
-            cache.error = error;
-            logger.error(`[AccountsRefresh] Failed to load quota for ${email}:`, error);
+            cache.error = result.error || 'Unknown error';
+            logger.error(`[AccountsRefresh] Failed to load quota for ${email}:`, result.error);
+            
+            // 检查是否为授权失败
+            if (result.error && this.isAuthError(result.error)) {
+                if (account) {
+                    account.isInvalid = true;
+                    account.invalidReason = t('accountsRefresh.authExpired');
+                }
+            }
         }
 
         this.quotaCache.set(email, cache);
@@ -300,17 +391,48 @@ export class AccountsRefreshService {
         }
     }
 
-    private startAutoRefresh(): void {
-        if (this.refreshTimer) {
-            clearInterval(this.refreshTimer);
+    /**
+     * 计算下一次自动刷新的间隔（含随机偏移）
+     * 规则：
+     * - 设置间隔 ≥ 30秒：随机 [-10秒, +10秒] 偏移
+     * - 设置间隔 < 30秒：随机 [0秒, +10秒] 偏移（只加不减）
+     */
+    private calculateNextRefreshInterval(): number {
+        const baseIntervalMs = configService.getRefreshIntervalMs();
+        const baseSeconds = baseIntervalMs / 1000;
+
+        let offsetMs: number;
+        if (baseSeconds >= 30) {
+            // 30秒及以上：-10到+10秒随机
+            offsetMs = (Math.random() * 20 - 10) * 1000;
+        } else {
+            // 30秒以下：0到+10秒随机（只加不减）
+            offsetMs = Math.random() * 10 * 1000;
         }
 
-        const intervalMs = configService.getRefreshIntervalMs();
-        logger.info(`[AccountsRefresh] Starting auto refresh, interval: ${intervalMs}ms`);
+        // 确保最小间隔为 5 秒
+        return Math.max(5000, baseIntervalMs + offsetMs);
+    }
 
-        this.refreshTimer = setInterval(() => {
-            void this.refreshQuotas();
-        }, intervalMs);
+    /**
+     * 调度下一次自动刷新
+     * 使用动态 setTimeout 替代固定 setInterval，每次刷新后重新计算下一次间隔
+     */
+    private scheduleNextAutoRefresh(): void {
+        if (this.refreshTimer) {
+            clearTimeout(this.refreshTimer);
+        }
+
+        const nextIntervalMs = this.calculateNextRefreshInterval();
+        const baseIntervalMs = configService.getRefreshIntervalMs();
+        logger.info(`[AccountsRefresh] Next auto refresh in ${Math.round(nextIntervalMs / 1000)}s (base: ${baseIntervalMs / 1000}s)`);
+
+        this.refreshTimer = setTimeout(() => {
+            void this.refreshQuotas().finally(() => {
+                // 刷新完成后调度下一次
+                this.scheduleNextAutoRefresh();
+            });
+        }, nextIntervalMs);
     }
 
     private async loadAccountsFromWebSocket(): Promise<void> {
@@ -457,6 +579,9 @@ export class AccountsRefreshService {
         this.emitUpdate();
     }
 
+    /**
+     * @deprecated 已被 QuotaRefreshManager 替代，保留以备回退
+     */
     private async silentLoadAccountQuota(email: string): Promise<void> {
         // 统一检查
         const { canRefresh, skipReason } = this.checkAccountRefreshable(email);

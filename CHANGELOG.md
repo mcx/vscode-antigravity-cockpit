@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.6]
+
+### Added
+- **Unified quota refresh entry**: Sidebar, accounts overview, and auto refresh now flow through `QuotaRefreshManager` for consistent behavior.
+
+### Improved
+- **Shared file cache**: Batch and auto refresh use the 60-second file cache to prevent duplicate requests across IDEs/workspaces.
+- **Auto refresh jitter**: Added randomized offset (>=30s: -10~+10s; <30s: 0~+10s) to reduce synchronized spikes.
+- **Dashboard refresh**: In authorized mode, refreshes only the active account via real-time request path.
+
+### Fixed
+- **Force refresh**: Concurrent waits no longer fall back to cache, ensuring single-account refresh stays real-time.
+- **Copy consistency**: Cached time labels now use i18n strings.
+
 ## [2.1.5]
 
 ### Added

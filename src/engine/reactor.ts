@@ -1165,6 +1165,7 @@ export class ReactorCore {
                     `Original: ${models.length}, Visible config: ${visibleModels.length}. ` +
                     'Showing all recommended models instead.');
                 // 不应用 visibleModels 过滤，但保留推荐模型过滤
+                void configService.updateVisibleModels([]);
             } else {
                 models = filteredModels;
             }

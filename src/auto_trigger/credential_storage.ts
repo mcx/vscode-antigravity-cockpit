@@ -751,7 +751,8 @@ class CredentialStorage {
 
         const storage = await this.getCredentialsStorage();
         storage.accounts[activeAccount] = credential;
-        await this.saveCredentialsStorage(storage);
+        // Token 更新不需要通知其他客户端，避免广播风暴
+        await this.saveCredentialsStorage(storage, { skipNotifyTools: true });
 
         // Sync to legacy key for backward compatibility
         await this.syncToLegacyKey(activeAccount);
@@ -773,7 +774,8 @@ class CredentialStorage {
 
         const storage = await this.getCredentialsStorage();
         storage.accounts[email] = credential;
-        await this.saveCredentialsStorage(storage);
+        // Token 更新不需要通知其他客户端，避免广播风暴
+        await this.saveCredentialsStorage(storage, { skipNotifyTools: true });
 
         // Sync to legacy key if this is the active account
         const activeAccount = await this.getActiveAccount();
@@ -796,7 +798,8 @@ class CredentialStorage {
         credential.projectId = projectId;
         const storage = await this.getCredentialsStorage();
         storage.accounts[email] = credential;
-        await this.saveCredentialsStorage(storage);
+        // ProjectId 更新不需要通知其他客户端，避免广播风暴
+        await this.saveCredentialsStorage(storage, { skipNotifyTools: true });
 
         logger.info(`[CredentialStorage] ProjectId updated for ${email}`);
     }
