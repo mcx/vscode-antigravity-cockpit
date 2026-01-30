@@ -65,8 +65,12 @@ export function createAnnouncementModule({
         if (!container) return;
 
         const announcements = announcementState.announcements || [];
+        container.textContent = '';
         if (announcements.length === 0) {
-            container.innerHTML = `<div class="announcement-empty">${i18n['announcement.empty'] || 'No notifications'}</div>`;
+            const emptyEl = document.createElement('div');
+            emptyEl.className = 'announcement-empty';
+            emptyEl.textContent = i18n['announcement.empty'] || 'No notifications';
+            container.appendChild(emptyEl);
             return;
         }
 
@@ -77,25 +81,45 @@ export function createAnnouncementModule({
             urgent: '🚨',
         };
 
-        container.innerHTML = announcements.map(ann => {
+        announcements.forEach(ann => {
             const isUnread = announcementState.unreadIds.includes(ann.id);
             const icon = typeIcons[ann.type] || 'ℹ️';
             const timeAgo = formatTimeAgo(ann.createdAt);
 
-            return `
-                <div class="announcement-item ${isUnread ? 'unread' : ''}" data-id="${ann.id}">
-                    <span class="announcement-icon">${icon}</span>
-                    <div class="announcement-info">
-                        <div class="announcement-title">
-                            ${isUnread ? '<span class="announcement-unread-dot"></span>' : ''}
-                            <span>${ann.title}</span>
-                        </div>
-                        <div class="announcement-summary">${ann.summary}</div>
-                        <div class="announcement-time">${timeAgo}</div>
-                    </div>
-                </div>
-            `;
-        }).join('');
+            const item = document.createElement('div');
+            item.className = `announcement-item ${isUnread ? 'unread' : ''}`;
+            item.dataset.id = String(ann.id ?? '');
+
+            const iconEl = document.createElement('span');
+            iconEl.className = 'announcement-icon';
+            iconEl.textContent = icon;
+
+            const info = document.createElement('div');
+            info.className = 'announcement-info';
+
+            const title = document.createElement('div');
+            title.className = 'announcement-title';
+            if (isUnread) {
+                const dot = document.createElement('span');
+                dot.className = 'announcement-unread-dot';
+                title.appendChild(dot);
+            }
+            const titleText = document.createElement('span');
+            titleText.textContent = ann.title || '';
+            title.appendChild(titleText);
+
+            const summary = document.createElement('div');
+            summary.className = 'announcement-summary';
+            summary.textContent = ann.summary || '';
+
+            const time = document.createElement('div');
+            time.className = 'announcement-time';
+            time.textContent = timeAgo;
+
+            info.append(title, summary, time);
+            item.append(iconEl, info);
+            container.appendChild(item);
+        });
 
         // 绑定点击事件
         container.querySelectorAll('.announcement-item').forEach(item => {
@@ -362,12 +386,16 @@ export function createAnnouncementModule({
         // 创建预览遮罩
         const overlay = document.createElement('div');
         overlay.className = 'image-preview-overlay';
-        overlay.innerHTML = `
-            <div class="image-preview-container">
-                <img src="${imageUrl}" class="image-preview-img" />
-                <div class="image-preview-hint">${i18n['announcement.clickToClose'] || 'Click to close'}</div>
-            </div>
-        `;
+        const previewContainer = document.createElement('div');
+        previewContainer.className = 'image-preview-container';
+        const img = document.createElement('img');
+        img.className = 'image-preview-img';
+        img.src = imageUrl;
+        const hint = document.createElement('div');
+        hint.className = 'image-preview-hint';
+        hint.textContent = i18n['announcement.clickToClose'] || 'Click to close';
+        previewContainer.append(img, hint);
+        overlay.appendChild(previewContainer);
 
         // 点击关闭
         overlay.addEventListener('click', () => {

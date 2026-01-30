@@ -118,6 +118,16 @@
             .replace(/'/g, '&#039;');
     }
 
+    function appendTextWithLineBreaks(container, text) {
+        const lines = String(text || '').split('\n');
+        lines.forEach((line, index) => {
+            container.appendChild(document.createTextNode(line));
+            if (index < lines.length - 1) {
+                container.appendChild(document.createElement('br'));
+            }
+        });
+    }
+
     function formatDate(timestamp) {
         if (!timestamp) return '-';
         const date = new Date(timestamp);
@@ -511,7 +521,13 @@
             if (!existing) {
                 return false;
             }
-            existing.outerHTML = renderer(account);
+            const html = renderer(account);
+            const parsed = new DOMParser().parseFromString(html, 'text/html');
+            const replacement = parsed.body.firstElementChild;
+            if (!replacement) {
+                return false;
+            }
+            existing.replaceWith(replacement);
         }
         return true;
     }
@@ -1044,32 +1060,56 @@
         if (!container) return;
 
         const announcements = announcementState.announcements || [];
+        container.textContent = '';
         if (announcements.length === 0) {
-            container.innerHTML = `<div class="announcement-empty">${getI18n('announcement.empty', 'No notifications')}</div>`;
+            const emptyEl = document.createElement('div');
+            emptyEl.className = 'announcement-empty';
+            emptyEl.textContent = getI18n('announcement.empty', 'No notifications');
+            container.appendChild(emptyEl);
             return;
         }
 
         const typeIcons = { feature: '✨', warning: '⚠️', info: 'ℹ️', urgent: '🚨' };
 
-        container.innerHTML = announcements.map(ann => {
+        announcements.forEach(ann => {
             const isUnread = announcementState.unreadIds.includes(ann.id);
             const icon = typeIcons[ann.type] || 'ℹ️';
             const timeAgo = formatTimeAgo(ann.createdAt);
 
-            return `
-                <div class="announcement-item ${isUnread ? 'unread' : ''}" data-id="${ann.id}">
-                    <span class="announcement-icon">${icon}</span>
-                    <div class="announcement-info">
-                        <div class="announcement-title">
-                            ${isUnread ? '<span class="announcement-unread-dot"></span>' : ''}
-                            <span>${escapeHtml(ann.title)}</span>
-                        </div>
-                        <div class="announcement-summary">${escapeHtml(ann.summary)}</div>
-                        <div class="announcement-time">${timeAgo}</div>
-                    </div>
-                </div>
-            `;
-        }).join('');
+            const item = document.createElement('div');
+            item.className = `announcement-item ${isUnread ? 'unread' : ''}`;
+            item.dataset.id = String(ann.id ?? '');
+
+            const iconEl = document.createElement('span');
+            iconEl.className = 'announcement-icon';
+            iconEl.textContent = icon;
+
+            const info = document.createElement('div');
+            info.className = 'announcement-info';
+
+            const title = document.createElement('div');
+            title.className = 'announcement-title';
+            if (isUnread) {
+                const dot = document.createElement('span');
+                dot.className = 'announcement-unread-dot';
+                title.appendChild(dot);
+            }
+            const titleText = document.createElement('span');
+            titleText.textContent = ann.title || '';
+            title.appendChild(titleText);
+
+            const summary = document.createElement('div');
+            summary.className = 'announcement-summary';
+            summary.textContent = ann.summary || '';
+
+            const time = document.createElement('div');
+            time.className = 'announcement-time';
+            time.textContent = timeAgo;
+
+            info.append(title, summary, time);
+            item.append(iconEl, info);
+            container.appendChild(item);
+        });
 
         container.querySelectorAll('.announcement-item').forEach(item => {
             item.addEventListener('click', () => {
@@ -1130,48 +1170,72 @@
         if (popupTitle) popupTitle.textContent = ann.title;
 
         if (popupContent) {
-            let contentHtml = `<div class="announcement-text">${escapeHtml(ann.content).replace(/\n/g, '<br>')}</div>`;
+            popupContent.textContent = '';
+
+            const textBlock = document.createElement('div');
+            textBlock.className = 'announcement-text';
+            appendTextWithLineBreaks(textBlock, ann.content || '');
+            popupContent.appendChild(textBlock);
+
             if (ann.images && ann.images.length > 0) {
-                contentHtml += '<div class="announcement-images">';
+                const imagesWrap = document.createElement('div');
+                imagesWrap.className = 'announcement-images';
                 for (const img of ann.images) {
-                    contentHtml += `
-                        <div class="announcement-image-item">
-                            <img src="${escapeHtml(img.url)}" alt="${escapeHtml(img.alt || img.label || '')}" class="announcement-image" data-preview-url="${escapeHtml(img.url)}" title="${getI18n('announcement.clickToEnlarge', 'Click to enlarge')}" />
-                            <div class="image-skeleton"></div>
-                            ${img.label ? `<div class="announcement-image-label">${escapeHtml(img.label)}</div>` : ''}
-                        </div>
-                    `;
-                }
-                contentHtml += '</div>';
-            }
-            popupContent.innerHTML = contentHtml;
+                    const item = document.createElement('div');
+                    item.className = 'announcement-image-item';
 
-            popupContent.querySelectorAll('.announcement-image').forEach(imgEl => {
-                imgEl.addEventListener('load', () => {
-                    imgEl.classList.add('loaded');
-                });
+                    const imgEl = document.createElement('img');
+                    imgEl.className = 'announcement-image';
+                    imgEl.src = img.url;
+                    imgEl.alt = img.alt || img.label || '';
+                    imgEl.dataset.previewUrl = img.url;
+                    imgEl.title = getI18n('announcement.clickToEnlarge', 'Click to enlarge');
 
-                imgEl.addEventListener('error', () => {
-                    const item = imgEl.closest('.announcement-image-item');
-                    if (item) {
-                        const skeleton = item.querySelector('.image-skeleton');
-                        if (skeleton) skeleton.remove();
-                        imgEl.style.display = 'none';
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'image-load-error';
-                        errorDiv.innerHTML = `
-                            <span class="icon">🖼️</span>
-                            <span>${getI18n('announcement.imageLoadFailed', 'Image failed to load')}</span>
-                        `;
-                        item.insertBefore(errorDiv, item.firstChild);
+                    const skeleton = document.createElement('div');
+                    skeleton.className = 'image-skeleton';
+
+                    item.append(imgEl, skeleton);
+
+                    if (img.label) {
+                        const label = document.createElement('div');
+                        label.className = 'announcement-image-label';
+                        label.textContent = img.label;
+                        item.appendChild(label);
                     }
-                });
 
-                imgEl.addEventListener('click', () => {
-                    const url = imgEl.getAttribute('data-preview-url');
-                    if (url) showImagePreview(url);
+                    imagesWrap.appendChild(item);
+                }
+                popupContent.appendChild(imagesWrap);
+
+                popupContent.querySelectorAll('.announcement-image').forEach(imgEl => {
+                    imgEl.addEventListener('load', () => {
+                        imgEl.classList.add('loaded');
+                    });
+
+                    imgEl.addEventListener('error', () => {
+                        const item = imgEl.closest('.announcement-image-item');
+                        if (item) {
+                            const skeleton = item.querySelector('.image-skeleton');
+                            if (skeleton) skeleton.remove();
+                            imgEl.style.display = 'none';
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className = 'image-load-error';
+                            const icon = document.createElement('span');
+                            icon.className = 'icon';
+                            icon.textContent = '🖼️';
+                            const text = document.createElement('span');
+                            text.textContent = getI18n('announcement.imageLoadFailed', 'Image failed to load');
+                            errorDiv.append(icon, text);
+                            item.insertBefore(errorDiv, item.firstChild);
+                        }
+                    });
+
+                    imgEl.addEventListener('click', () => {
+                        const url = imgEl.getAttribute('data-preview-url');
+                        if (url) showImagePreview(url);
+                    });
                 });
-            });
+            }
         }
 
         if (ann.action && ann.action.label) {
@@ -1289,12 +1353,16 @@
     function showImagePreview(imageUrl) {
         const overlay = document.createElement('div');
         overlay.className = 'image-preview-overlay';
-        overlay.innerHTML = `
-            <div class="image-preview-container">
-                <img src="${imageUrl}" class="image-preview-img" />
-                <div class="image-preview-hint">${getI18n('announcement.clickToClose', 'Click to close')}</div>
-            </div>
-        `;
+        const previewContainer = document.createElement('div');
+        previewContainer.className = 'image-preview-container';
+        const img = document.createElement('img');
+        img.className = 'image-preview-img';
+        img.src = imageUrl;
+        const hint = document.createElement('div');
+        hint.className = 'image-preview-hint';
+        hint.textContent = getI18n('announcement.clickToClose', 'Click to close');
+        previewContainer.append(img, hint);
+        overlay.appendChild(previewContainer);
 
         overlay.addEventListener('click', () => {
             overlay.classList.add('closing');

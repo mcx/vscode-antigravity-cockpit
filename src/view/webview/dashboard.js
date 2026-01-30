@@ -1276,11 +1276,11 @@ import { createAnnouncementModule } from './dashboard_announcements';
                     <div class="modal-body antigravityTools-sync-body">
                         <div class="antigravityTools-sync-section">
                             <div class="antigravityTools-sync-label">${i18n['antigravityToolsSync.localAccount']}</div>
-                             <div class="antigravityTools-sync-current">${localEmail || i18n['common.none']}</div>
+                             <div class="antigravityTools-sync-current" id="antigravityTools-sync-local-email"></div>
                         </div>
                         <div class="antigravityTools-sync-section">
                             <div class="antigravityTools-sync-label">${i18n['autoTrigger.antigravityToolsSyncTarget']}</div>
-                            <div class="antigravityTools-sync-current antigravityTools-sync-highlight">${currentEmail}</div>
+                            <div class="antigravityTools-sync-current antigravityTools-sync-highlight" id="antigravityTools-sync-target-email"></div>
                         </div>
                     </div>
                     <div class="modal-footer antigravityTools-sync-footer">
@@ -1290,6 +1290,15 @@ import { createAnnouncementModule } from './dashboard_announcements';
                 </div>
             `;
             modal.classList.remove('hidden');
+
+            const localEmailEl = modal.querySelector('#antigravityTools-sync-local-email');
+            if (localEmailEl) {
+                localEmailEl.textContent = localEmail || i18n['common.none'];
+            }
+            const targetEmailEl = modal.querySelector('#antigravityTools-sync-target-email');
+            if (targetEmailEl) {
+                targetEmailEl.textContent = currentEmail || i18n['common.unknown'];
+            }
 
             let autoSwitchTimer = null;
 
@@ -1337,18 +1346,18 @@ import { createAnnouncementModule } from './dashboard_announcements';
                 <div class="modal-header antigravityTools-sync-header">
                     <div class="antigravityTools-sync-title">
                         <h3>${i18n['autoTrigger.antigravityToolsSyncTitle']}</h3>
-                        <span class="antigravityTools-sync-count" id="antigravityTools-sync-count">+${newEmails.length}</span>
+                        <span class="antigravityTools-sync-count" id="antigravityTools-sync-count"></span>
                     </div>
                     <button class="close-btn" id="antigravityTools-sync-close">×</button>
                 </div>
                 <div class="modal-body antigravityTools-sync-body">
                     <div class="antigravityTools-sync-section">
                         <div class="antigravityTools-sync-label">${i18n['autoTrigger.antigravityToolsSyncNew']}</div>
-                        <div class="antigravityTools-sync-chips">${newEmails.map(e => `<span class="antigravityTools-sync-chip">${e}</span>`).join('')}</div>
+                        <div class="antigravityTools-sync-chips" id="antigravityTools-sync-chips"></div>
                     </div>
                     <div class="antigravityTools-sync-section">
                         <div class="antigravityTools-sync-label">${i18n['autoTrigger.antigravityToolsSyncTarget']}</div>
-                        <div class="antigravityTools-sync-current">${currentEmail || i18n['common.unknown']}</div>
+                        <div class="antigravityTools-sync-current" id="antigravityTools-sync-current-email"></div>
                     </div>
                 </div>
                 <div class="modal-footer antigravityTools-sync-footer">
@@ -1361,6 +1370,25 @@ import { createAnnouncementModule } from './dashboard_announcements';
             </div>
         `;
         modal.classList.remove('hidden');
+
+        const countEl = modal.querySelector('#antigravityTools-sync-count');
+        if (countEl) {
+            countEl.textContent = `+${newEmails.length}`;
+        }
+        const chipsEl = modal.querySelector('#antigravityTools-sync-chips');
+        if (chipsEl) {
+            chipsEl.textContent = '';
+            newEmails.forEach(email => {
+                const chip = document.createElement('span');
+                chip.className = 'antigravityTools-sync-chip';
+                chip.textContent = email;
+                chipsEl.appendChild(chip);
+            });
+        }
+        const currentEmailEl = modal.querySelector('#antigravityTools-sync-current-email');
+        if (currentEmailEl) {
+            currentEmailEl.textContent = currentEmail || i18n['common.unknown'];
+        }
 
         let autoConfirmTimer = null;
 
@@ -1886,39 +1914,74 @@ import { createAnnouncementModule } from './dashboard_announcements';
         const accounts = auth?.accounts || [];
         const activeAccount = auth?.activeAccount;
 
+        body.textContent = '';
         if (accounts.length === 0) {
-            body.innerHTML = `<div class="account-manage-empty">${i18n['autoTrigger.noAccounts'] || 'No accounts authorized'}</div>`;
+            const emptyEl = document.createElement('div');
+            emptyEl.className = 'account-manage-empty';
+            emptyEl.textContent = i18n['autoTrigger.noAccounts'] || 'No accounts authorized';
+            body.appendChild(emptyEl);
             return;
         }
 
-        const listHtml = accounts.map(acc => {
+        const listEl = document.createElement('div');
+        listEl.className = 'account-manage-list';
+
+        accounts.forEach(acc => {
             const isActive = acc.email === activeAccount;
             // Check if refresh token is invalid (marked by backend when refresh fails)
             const isInvalid = acc.isInvalid === true;
-            const invalidClass = isInvalid ? ' expired' : '';
             const icon = isInvalid ? '⚠️' : (isActive ? '✅' : '👤');
-            const invalidBadge = isInvalid ? `<span class="account-manage-badge expired">${i18n['autoTrigger.tokenExpired'] || 'Expired'}</span>` : '';
-            const activeBadge = isActive && !isInvalid ? `<span class="account-manage-badge">${i18n['autoTrigger.accountActive'] || 'Active'}</span>` : '';
-            
-            // 切换登录账户按钮（所有账号都显示）
-            const switchBtn = `<button class="at-btn at-btn-small at-btn-primary account-switch-login-btn" data-email="${acc.email}">${i18n['autoTrigger.switchLoginBtn'] || '切换登录'}</button>`;
-            
-            return `
-                <div class="account-manage-item ${isActive ? 'active' : ''}${invalidClass}" data-email="${acc.email}">
-                    <div class="account-manage-info">
-                        <span class="account-manage-icon">${icon}</span>
-                        <span class="account-manage-email">${acc.email}</span>
-                        ${activeBadge}${invalidBadge}
-                    </div>
-                    <div class="account-manage-actions">
-                        ${switchBtn}
-                        <button class="at-btn at-btn-small at-btn-danger account-remove-btn" data-email="${acc.email}">${i18n['autoTrigger.deleteBtn'] || '删除'}</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
 
-        body.innerHTML = `<div class="account-manage-list">${listHtml}</div>`;
+            const item = document.createElement('div');
+            item.className = `account-manage-item ${isActive ? 'active' : ''}${isInvalid ? ' expired' : ''}`;
+            item.dataset.email = acc.email;
+
+            const info = document.createElement('div');
+            info.className = 'account-manage-info';
+
+            const iconEl = document.createElement('span');
+            iconEl.className = 'account-manage-icon';
+            iconEl.textContent = icon;
+
+            const emailEl = document.createElement('span');
+            emailEl.className = 'account-manage-email';
+            emailEl.textContent = acc.email;
+
+            info.append(iconEl, emailEl);
+
+            if (isActive && !isInvalid) {
+                const activeBadge = document.createElement('span');
+                activeBadge.className = 'account-manage-badge';
+                activeBadge.textContent = i18n['autoTrigger.accountActive'] || 'Active';
+                info.appendChild(activeBadge);
+            }
+
+            if (isInvalid) {
+                const invalidBadge = document.createElement('span');
+                invalidBadge.className = 'account-manage-badge expired';
+                invalidBadge.textContent = i18n['autoTrigger.tokenExpired'] || 'Expired';
+                info.appendChild(invalidBadge);
+            }
+
+            const actions = document.createElement('div');
+            actions.className = 'account-manage-actions';
+
+            const switchBtn = document.createElement('button');
+            switchBtn.className = 'at-btn at-btn-small at-btn-primary account-switch-login-btn';
+            switchBtn.dataset.email = acc.email;
+            switchBtn.textContent = i18n['autoTrigger.switchLoginBtn'] || '切换登录';
+
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'at-btn at-btn-small at-btn-danger account-remove-btn';
+            removeBtn.dataset.email = acc.email;
+            removeBtn.textContent = i18n['autoTrigger.deleteBtn'] || '删除';
+
+            actions.append(switchBtn, removeBtn);
+            item.append(info, actions);
+            listEl.appendChild(item);
+        });
+
+        body.appendChild(listEl);
 
         // 绑定点击整行切换查看配额
         body.querySelectorAll('.account-manage-item').forEach(item => {

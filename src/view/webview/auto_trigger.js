@@ -879,16 +879,24 @@
         const container = document.getElementById('at-config-models');
         if (!container) return;
 
+        container.textContent = '';
         if (availableModels.length === 0) {
-            container.innerHTML = `<div class="at-no-data">${t('autoTrigger.noModels')}</div>`;
+            const emptyEl = document.createElement('div');
+            emptyEl.className = 'at-no-data';
+            emptyEl.textContent = t('autoTrigger.noModels');
+            container.appendChild(emptyEl);
             return;
         }
 
         // availableModels 现在是 ModelInfo 对象数组: { id, displayName, modelConstant }
-        container.innerHTML = availableModels.map(model => {
+        availableModels.forEach(model => {
             const isSelected = selectedModels.includes(model.id);
-            return `<div class="at-model-item ${isSelected ? 'selected' : ''}" data-model="${escapeHtml(model.id)}">${escapeHtml(model.displayName)}</div>`;
-        }).join('');
+            const item = document.createElement('div');
+            item.className = `at-model-item ${isSelected ? 'selected' : ''}`;
+            item.dataset.model = model.id;
+            item.textContent = model.displayName;
+            container.appendChild(item);
+        });
 
         container.querySelectorAll('.at-model-item').forEach(item => {
             item.addEventListener('click', () => {
@@ -911,15 +919,23 @@
         const container = document.getElementById('at-config-accounts');
         if (!container) return;
 
+        container.textContent = '';
         if (!availableAccounts || availableAccounts.length === 0) {
-            container.innerHTML = `<div class="at-no-data">${t('autoTrigger.noAccounts')}</div>`;
+            const emptyEl = document.createElement('div');
+            emptyEl.className = 'at-no-data';
+            emptyEl.textContent = t('autoTrigger.noAccounts');
+            container.appendChild(emptyEl);
             return;
         }
 
-        container.innerHTML = availableAccounts.map(email => {
+        availableAccounts.forEach(email => {
             const isSelected = selectedAccounts.includes(email);
-            return `<div class="at-model-item ${isSelected ? 'selected' : ''}" data-email="${escapeHtml(email)}">${escapeHtml(email)}</div>`;
-        }).join('');
+            const item = document.createElement('div');
+            item.className = `at-model-item ${isSelected ? 'selected' : ''}`;
+            item.dataset.email = email;
+            item.textContent = email;
+            container.appendChild(item);
+        });
 
         container.querySelectorAll('.at-model-item').forEach(item => {
             item.addEventListener('click', () => {
@@ -982,10 +998,15 @@
             testSelectedAccounts = [activeAccountEmail];
         }
 
-        container.innerHTML = availableAccounts.map(email => {
+        container.textContent = '';
+        availableAccounts.forEach(email => {
             const isSelected = testSelectedAccounts.includes(email);
-            return `<div class="at-model-item ${isSelected ? 'selected' : ''}" data-email="${escapeHtml(email)}">${escapeHtml(email)}</div>`;
-        }).join('');
+            const item = document.createElement('div');
+            item.className = `at-model-item ${isSelected ? 'selected' : ''}`;
+            item.dataset.email = email;
+            item.textContent = email;
+            container.appendChild(item);
+        });
 
         container.querySelectorAll('.at-model-item').forEach(item => {
             item.addEventListener('click', () => {
@@ -1010,33 +1031,21 @@
 
         const triggers = currentState?.recentTriggers || [];
 
+        container.textContent = '';
         if (triggers.length === 0) {
-            container.innerHTML = `<div class="at-no-data">${t('autoTrigger.noHistory')}</div>`;
+            const emptyEl = document.createElement('div');
+            emptyEl.className = 'at-no-data';
+            emptyEl.textContent = t('autoTrigger.noHistory');
+            container.appendChild(emptyEl);
             return;
         }
 
-        container.innerHTML = triggers.map(trigger => {
+        triggers.forEach(trigger => {
             const date = new Date(trigger.timestamp);
             const timeStr = date.toLocaleString();
             const icon = trigger.success ? '✅' : '❌';
             const statusText = trigger.success ? t('autoTrigger.success') : t('autoTrigger.failed');
-            const accountBadge = trigger.accountEmail
-                ? `<span class="at-history-account" title="${escapeHtml(trigger.accountEmail)}">${escapeHtml(trigger.accountEmail)}</span>`
-                : '';
 
-            // 显示请求内容和响应
-            let contentHtml = '';
-            if (trigger.prompt) {
-                contentHtml += `<div class="at-history-prompt">${escapeHtml(trigger.prompt)}</div>`;
-            }
-            if (trigger.message) {
-                contentHtml += `<div class="at-history-response">${formatResponseMessage(trigger.message)}</div>`;
-            }
-            if (!contentHtml) {
-                contentHtml = `<div class="at-history-message">${statusText}</div>`;
-            }
-
-            // 触发类型标签
             let typeLabel = t('autoTrigger.typeManual');
             let typeClass = 'at-history-type-manual';
             if (trigger.triggerType === 'auto') {
@@ -1051,19 +1060,68 @@
                     typeLabel = t('autoTrigger.typeAuto');
                 }
             }
-            const typeBadge = `<span class="at-history-type-badge ${typeClass}">${typeLabel}</span>`;
 
-            return `
-                <div class="at-history-item">
-                    <span class="at-history-icon">${icon}</span>
-                    <div class="at-history-info">
-                        <div class="at-history-time">${timeStr}${typeBadge}${accountBadge}</div>
-                        ${contentHtml}
-                    </div>
-                    ${trigger.duration ? `<span class="at-history-duration">${trigger.duration}ms</span>` : ''}
-                </div>
-            `;
-        }).join('');
+            const item = document.createElement('div');
+            item.className = 'at-history-item';
+
+            const iconEl = document.createElement('span');
+            iconEl.className = 'at-history-icon';
+            iconEl.textContent = icon;
+
+            const info = document.createElement('div');
+            info.className = 'at-history-info';
+
+            const time = document.createElement('div');
+            time.className = 'at-history-time';
+            time.appendChild(document.createTextNode(timeStr));
+
+            const typeBadge = document.createElement('span');
+            typeBadge.className = `at-history-type-badge ${typeClass}`;
+            typeBadge.textContent = typeLabel;
+            time.appendChild(typeBadge);
+
+            if (trigger.accountEmail) {
+                const accountBadge = document.createElement('span');
+                accountBadge.className = 'at-history-account';
+                accountBadge.title = trigger.accountEmail;
+                accountBadge.textContent = trigger.accountEmail;
+                time.appendChild(accountBadge);
+            }
+
+            info.appendChild(time);
+
+            if (trigger.prompt) {
+                const prompt = document.createElement('div');
+                prompt.className = 'at-history-prompt';
+                prompt.textContent = trigger.prompt;
+                info.appendChild(prompt);
+            }
+
+            if (trigger.message) {
+                const response = document.createElement('div');
+                response.className = 'at-history-response';
+                response.appendChild(buildResponseMessageNodes(trigger.message));
+                info.appendChild(response);
+            }
+
+            if (!trigger.prompt && !trigger.message) {
+                const msg = document.createElement('div');
+                msg.className = 'at-history-message';
+                msg.textContent = statusText;
+                info.appendChild(msg);
+            }
+
+            item.append(iconEl, info);
+
+            if (trigger.duration) {
+                const duration = document.createElement('span');
+                duration.className = 'at-history-duration';
+                duration.textContent = `${trigger.duration}ms`;
+                item.appendChild(duration);
+            }
+
+            container.appendChild(item);
+        });
     }
 
     // HTML 转义函数
@@ -1074,19 +1132,33 @@
     }
 
     // 格式化回复消息，识别 [[模型名]] 标记并高亮
-    function formatResponseMessage(message) {
-        if (!message) return '';
-        
-        // 先转义 HTML
-        let escaped = escapeHtml(message);
-        
-        // 识别 [[xxx]] 标记并替换为高亮标签
-        escaped = escaped.replace(/\[\[([^\]]+)\]\]/g, '<span class="at-model-name">$1</span>');
-        
-        // 将双换行转为 <br><br>
-        escaped = escaped.replace(/\n\n/g, '<br><br>');
-        
-        return escaped;
+    function appendTextWithParagraphBreaks(container, text) {
+        const parts = String(text || '').split(/\n\n/);
+        parts.forEach((part, index) => {
+            container.appendChild(document.createTextNode(part));
+            if (index < parts.length - 1) {
+                container.appendChild(document.createElement('br'));
+                container.appendChild(document.createElement('br'));
+            }
+        });
+    }
+
+    function buildResponseMessageNodes(message) {
+        const fragment = document.createDocumentFragment();
+        if (!message) return fragment;
+
+        const parts = String(message).split(/\[\[([^\]]+)\]\]/g);
+        parts.forEach((part, index) => {
+            if (index % 2 === 1) {
+                const span = document.createElement('span');
+                span.className = 'at-model-name';
+                span.textContent = part;
+                fragment.appendChild(span);
+            } else {
+                appendTextWithParagraphBreaks(fragment, part);
+            }
+        });
+        return fragment;
     }
 
     function updatePreview() {
@@ -1344,36 +1416,63 @@
         } else {
             const activeAccount = auth?.activeAccount;
             const activeEmail = activeAccount || auth?.email || (hasAccounts ? accounts[0].email : '');
-            const syncToggle = `
-                <label class="antigravityTools-sync-toggle">
-                    <input type="checkbox" id="at-antigravityTools-sync-checkbox" ${antigravityToolsSyncEnabled ? 'checked' : ''}>
-                    <span>${t('autoTrigger.antigravityToolsSync')}</span>
-                </label>
-            `;
-            const importBtn = `<button id="at-antigravityTools-import-btn" class="at-btn at-btn-secondary">${t('autoTrigger.importFromAntigravityTools')}</button>`;
+            const syncToggle = document.createElement('label');
+            syncToggle.className = 'antigravityTools-sync-toggle';
+            const syncInput = document.createElement('input');
+            syncInput.type = 'checkbox';
+            syncInput.id = 'at-antigravityTools-sync-checkbox';
+            syncInput.checked = Boolean(antigravityToolsSyncEnabled);
+            const syncText = document.createElement('span');
+            syncText.textContent = t('autoTrigger.antigravityToolsSync');
+            syncToggle.append(syncInput, syncText);
+
+            const importBtn = document.createElement('button');
+            importBtn.id = 'at-antigravityTools-import-btn';
+            importBtn.className = 'at-btn at-btn-secondary';
+            importBtn.textContent = t('autoTrigger.importFromAntigravityTools');
 
             if (isAuthorized) {
                 const extraCount = Math.max(accounts.length - 1, 0);
-                const accountCountBadge = extraCount > 0
-                    ? `<span class="account-count-badge" title="${t('autoTrigger.manageAccounts')}">+${extraCount}</span>`
-                    : '';
-                const manageBtn = accounts.length > 0
-                    ? `<button id="at-account-manage-btn" class="quota-account-manage-btn" title="${t('autoTrigger.manageAccounts')}">${t('autoTrigger.manageAccounts')}</button>`
-                    : '';
+                authRow.textContent = '';
 
-                authRow.innerHTML = `
-                    <div class="quota-auth-info quota-auth-info-clickable" title="${t('autoTrigger.manageAccounts')}">
-                        <span class="at-auth-icon">✅</span>
-                        <span class="at-auth-text">${t('autoTrigger.authorized')}</span>
-                        <span class="quota-auth-email">${activeEmail}</span>
-                        ${accountCountBadge}
-                        ${manageBtn}
-                    </div>
-                    <div class="quota-auth-actions at-auth-actions">
-                        ${syncToggle}
-                        ${importBtn}
-                    </div>
-                `;
+                const info = document.createElement('div');
+                info.className = 'quota-auth-info quota-auth-info-clickable';
+                info.title = t('autoTrigger.manageAccounts');
+
+                const icon = document.createElement('span');
+                icon.className = 'at-auth-icon';
+                icon.textContent = '✅';
+                const text = document.createElement('span');
+                text.className = 'at-auth-text';
+                text.textContent = t('autoTrigger.authorized');
+                const emailEl = document.createElement('span');
+                emailEl.className = 'quota-auth-email';
+                emailEl.textContent = activeEmail;
+
+                info.append(icon, text, emailEl);
+
+                if (extraCount > 0) {
+                    const badge = document.createElement('span');
+                    badge.className = 'account-count-badge';
+                    badge.title = t('autoTrigger.manageAccounts');
+                    badge.textContent = `+${extraCount}`;
+                    info.appendChild(badge);
+                }
+
+                if (accounts.length > 0) {
+                    const manageBtn = document.createElement('button');
+                    manageBtn.id = 'at-account-manage-btn';
+                    manageBtn.className = 'quota-account-manage-btn';
+                    manageBtn.title = t('autoTrigger.manageAccounts');
+                    manageBtn.textContent = t('autoTrigger.manageAccounts');
+                    info.appendChild(manageBtn);
+                }
+
+                const actions = document.createElement('div');
+                actions.className = 'quota-auth-actions at-auth-actions';
+                actions.append(syncToggle, importBtn);
+
+                authRow.append(info, actions);
 
                 // 点击授权信息区域打开账号管理弹框
                 authRow.querySelector('.quota-auth-info')?.addEventListener('click', () => {
@@ -1392,17 +1491,28 @@
                 attachAntigravityToolsSyncActions();
             } else {
                 // No accounts - show authorize button
-                authRow.innerHTML = `
-                    <div class="quota-auth-info">
-                        <span class="at-auth-icon">⚠️</span>
-                        <span class="at-auth-text">${t('autoTrigger.unauthorized')}</span>
-                    </div>
-                    <div class="quota-auth-actions at-auth-actions">
-                        ${syncToggle}
-                        ${importBtn}
-                        <button id="at-auth-btn" class="at-btn at-btn-primary">${t('autoTrigger.authorizeBtn')}</button>
-                    </div>
-                `;
+                authRow.textContent = '';
+
+                const info = document.createElement('div');
+                info.className = 'quota-auth-info';
+                const icon = document.createElement('span');
+                icon.className = 'at-auth-icon';
+                icon.textContent = '⚠️';
+                const text = document.createElement('span');
+                text.className = 'at-auth-text';
+                text.textContent = t('autoTrigger.unauthorized');
+                info.append(icon, text);
+
+                const actions = document.createElement('div');
+                actions.className = 'quota-auth-actions at-auth-actions';
+
+                const authBtn = document.createElement('button');
+                authBtn.id = 'at-auth-btn';
+                authBtn.className = 'at-btn at-btn-primary';
+                authBtn.textContent = t('autoTrigger.authorizeBtn');
+
+                actions.append(syncToggle, importBtn, authBtn);
+                authRow.append(info, actions);
 
                 document.getElementById('at-auth-btn')?.addEventListener('click', () => {
                     vscode.postMessage({ command: 'autoTrigger.authorize' });
