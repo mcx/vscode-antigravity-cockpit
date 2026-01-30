@@ -887,7 +887,7 @@
         // availableModels 现在是 ModelInfo 对象数组: { id, displayName, modelConstant }
         container.innerHTML = availableModels.map(model => {
             const isSelected = selectedModels.includes(model.id);
-            return `<div class="at-model-item ${isSelected ? 'selected' : ''}" data-model="${model.id}">${model.displayName}</div>`;
+            return `<div class="at-model-item ${isSelected ? 'selected' : ''}" data-model="${escapeHtml(model.id)}">${escapeHtml(model.displayName)}</div>`;
         }).join('');
 
         container.querySelectorAll('.at-model-item').forEach(item => {
@@ -918,7 +918,7 @@
 
         container.innerHTML = availableAccounts.map(email => {
             const isSelected = selectedAccounts.includes(email);
-            return `<div class="at-model-item ${isSelected ? 'selected' : ''}" data-email="${email}">${email}</div>`;
+            return `<div class="at-model-item ${isSelected ? 'selected' : ''}" data-email="${escapeHtml(email)}">${escapeHtml(email)}</div>`;
         }).join('');
 
         container.querySelectorAll('.at-model-item').forEach(item => {
@@ -949,7 +949,7 @@
 
         container.innerHTML = availableModels.map(model => {
             const isSelected = testSelectedModels.includes(model.id);
-            return `<div class="at-model-item ${isSelected ? 'selected' : ''}" data-model="${model.id}">${model.displayName}</div>`;
+            return `<div class="at-model-item ${isSelected ? 'selected' : ''}" data-model="${escapeHtml(model.id)}">${escapeHtml(model.displayName)}</div>`;
         }).join('');
 
         container.querySelectorAll('.at-model-item').forEach(item => {
@@ -984,7 +984,7 @@
 
         container.innerHTML = availableAccounts.map(email => {
             const isSelected = testSelectedAccounts.includes(email);
-            return `<div class="at-model-item ${isSelected ? 'selected' : ''}" data-email="${email}">${email}</div>`;
+            return `<div class="at-model-item ${isSelected ? 'selected' : ''}" data-email="${escapeHtml(email)}">${escapeHtml(email)}</div>`;
         }).join('');
 
         container.querySelectorAll('.at-model-item').forEach(item => {
