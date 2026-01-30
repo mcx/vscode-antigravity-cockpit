@@ -27,7 +27,7 @@ export interface QuotaCacheRecord {
     models: QuotaCacheModel[];
 }
 
-const CACHE_ROOT = path.join(os.homedir(), '.antigravity_cockpit', 'cache', 'quota');
+const CACHE_ROOT = path.join(os.homedir(), '.antigravity_cockpit', 'cache', 'quota_v2');
 
 function normalizeEmail(email: string): string {
     return email.trim().toLowerCase();

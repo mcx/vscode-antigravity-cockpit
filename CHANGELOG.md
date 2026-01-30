@@ -8,6 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.8]
+
+### Added
+- **Authorized API cache**: Cache raw authorized API responses in `quota_api_v1`.
+- **Cache source marker**: Store `customSource` in API cache records to identify the writer.
+
+### Changed
+- **Quota refresh**: Read the API cache before network requests and rebuild views from cached payloads.
+- **Authorized fetch**: Can honor force refresh while still using cache for normal reads.
+- **Legacy cache path**: Corrected legacy cache root to `quota_v2`.
+
+### Removed
+- **Processed quota cache**: Removed read/write of the old processed quota cache.
+
 ## [2.1.7]
 
 ### Added

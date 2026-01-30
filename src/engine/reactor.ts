@@ -24,7 +24,7 @@ import { cloudCodeClient, CloudCodeAuthError, CloudCodeRequestError } from '../s
 import { autoTriggerController } from '../auto_trigger/controller';
 import { oauthService, credentialStorage, ensureLocalCredentialImported } from '../auto_trigger';
 import { antigravityToolsSyncService } from '../antigravityTools_sync';
-import { readQuotaCache, writeQuotaCache, QuotaCacheModel, QuotaCacheRecord, QuotaCacheSource } from '../services/quota_cache';
+import { readQuotaApiCache, writeQuotaApiCache, isApiCacheValid } from '../services/quota_api_cache';
 import { AUTH_RECOMMENDED_LABELS, AUTH_RECOMMENDED_MODEL_IDS } from '../shared/recommended_models';
 
 const AUTH_RECOMMENDED_LABEL_RANK = new Map(
@@ -148,128 +148,30 @@ export class ReactorCore {
         }
     }
 
-    private formatCacheModels(models: ModelQuotaInfo[]): QuotaCacheModel[] {
-        return models.map((model) => ({
-            id: model.modelId,
-            displayName: model.label,
-            remainingPercentage: model.remainingPercentage,
-            remainingFraction: model.remainingFraction,
-            resetTime: model.resetTime?.toISOString(),
-            isRecommended: model.isRecommended,
-            tagTitle: model.tagTitle,
-            supportsImages: model.supportsImages,
-            supportedMimeTypes: model.supportedMimeTypes,
-        }));
-    }
-
-    private buildModelsFromCache(models: QuotaCacheModel[]): ModelQuotaInfo[] {
-        const now = Date.now();
-        return models.map((model) => {
-            const label = model.displayName || ReactorCore.getFallbackDisplayName(model.id) || model.id;
-            const remainingPercentage = model.remainingPercentage ?? (
-                model.remainingFraction !== undefined ? model.remainingFraction * 100 : undefined
-            );
-            const remainingFraction = model.remainingFraction ?? (
-                remainingPercentage !== undefined ? remainingPercentage / 100 : undefined
-            );
-            let resetTime = model.resetTime ? new Date(model.resetTime) : new Date(now + 24 * 60 * 60 * 1000);
-            let resetTimeValid = true;
-            if (Number.isNaN(resetTime.getTime())) {
-                resetTime = new Date(now + 24 * 60 * 60 * 1000);
-                resetTimeValid = false;
-            }
-            const timeUntilReset = Math.max(0, resetTime.getTime() - now);
-            return {
-                label,
-                modelId: model.id,
-                remainingFraction,
-                remainingPercentage,
-                isExhausted: (remainingFraction ?? 0) <= 0,
-                resetTime,
-                resetTimeDisplay: resetTimeValid ? this.formatIso(resetTime) : (t('common.unknown') || 'Unknown'),
-                timeUntilReset,
-                timeUntilResetFormatted: resetTimeValid ? this.formatDelta(timeUntilReset) : (t('common.unknown') || 'Unknown'),
-                resetTimeValid,
-                supportsImages: model.supportsImages,
-                isRecommended: model.isRecommended,
-                tagTitle: model.tagTitle,
-                supportedMimeTypes: model.supportedMimeTypes,
-            };
-        });
-    }
-
-    private static getFallbackDisplayName(id: string): string | undefined {
-        const key = id.toLowerCase();
-        const map: Record<string, string> = {
-            'claude-opus-4-5-thinking': 'Claude Opus 4.5 (Thinking)',
-            'claude-sonnet-4-5': 'Claude Sonnet 4.5',
-            'claude-sonnet-4-5-thinking': 'Claude Sonnet 4.5 (Thinking)',
-            'gemini-3-flash': 'Gemini 3 Flash',
-            'gemini-3-pro-high': 'Gemini 3 Pro (High)',
-            'gemini-3-pro-low': 'Gemini 3 Pro (Low)',
-            'gemini-3-pro-image': 'Gemini 3 Pro Image',
-            'gpt-oss-120b-medium': 'GPT-OSS 120B (Medium)',
-            'gemini-2.5-flash': 'Gemini 2.5 Flash',
-            'gemini-2.5-flash-lite': 'Gemini 2.5 Flash Lite',
-            'gemini-2.5-flash-thinking': 'Gemini 2.5 Flash (Thinking)',
-            'gemini-2.5-pro': 'Gemini 2.5 Pro',
-        };
-        return map[key];
-    }
-
-    private async persistQuotaCache(
-        source: QuotaCacheSource,
-        email: string | null,
-        telemetry: QuotaSnapshot,
-    ): Promise<void> {
-        if (!email) {
-            return;
-        }
-        const models = telemetry.allModels && telemetry.allModels.length > 0
-            ? telemetry.allModels
-            : telemetry.models;
-        const record: QuotaCacheRecord = {
-            version: 1,
-            source,
-            email,
-            updatedAt: Date.now(),
-            subscriptionTier: telemetry.userInfo?.tier && telemetry.userInfo.tier !== 'N/A'
-                ? telemetry.userInfo.tier
-                : undefined,
-            isForbidden: false,
-            models: this.formatCacheModels(models),
-        };
-        try {
-            await writeQuotaCache(record);
-        } catch (error) {
-            logger.debug(`[QuotaCache] Failed to write cache: ${error instanceof Error ? error.message : String(error)}`);
-        }
-    }
-
     public async tryUseQuotaCache(
-        source: QuotaCacheSource,
+        source: 'authorized' | 'local',
         email: string | null,
     ): Promise<boolean> {
-        if (!email) {
+        if (source !== 'authorized' || !email) {
             return false;
         }
-        const record = await readQuotaCache(source, email);
-        if (!record || !record.models?.length) {
+        const record = await readQuotaApiCache('authorized', email);
+        if (!isApiCacheValid(record)) {
             return false;
         }
-        const models = this.buildModelsFromCache(record.models);
-        if (models.length === 0) {
-            return false;
-        }
-        if (source === 'authorized') {
+        try {
+            const models = this.buildModelsFromAuthorizedResponse(record!.payload as AuthorizedQuotaResponse);
+            if (models.length === 0) {
+                return false;
+            }
             this.lastAuthorizedModels = models;
+            const telemetry = this.buildSnapshot(models);
+            this.publishTelemetry(telemetry, 'authorized');
+            return true;
+        } catch (error) {
+            logger.warn(`[QuotaApiCache] Failed to decode cached response: ${error instanceof Error ? error.message : String(error)}`);
+            return false;
         }
-        const telemetry = this.buildSnapshot(models);
-        if (source === 'local') {
-            telemetry.localAccountEmail = email;
-        }
-        this.publishTelemetry(telemetry, source);
-        return true;
     }
 
     /**
@@ -278,7 +180,10 @@ export class ReactorCore {
      * @param email 账号邮箱
      * @returns 配额快照
      */
-    async fetchQuotaForAccount(email: string): Promise<QuotaSnapshot> {
+    async fetchQuotaForAccount(
+        email: string,
+        options?: { forceRefresh?: boolean },
+    ): Promise<QuotaSnapshot> {
         logger.info(`[ReactorCore] Fetching quota for account: ${email}`);
 
         try {
@@ -296,7 +201,12 @@ export class ReactorCore {
             const projectId = credential?.projectId;
 
             // 获取配额模型（复用现有方法）
-            const models = await this.fetchAuthorizedQuotaModels(tokenStatus.token, projectId);
+            const models = await this.fetchAuthorizedQuotaModels(
+                tokenStatus.token,
+                projectId,
+                email,
+                options?.forceRefresh ?? false,
+            );
 
             // 构建快照（复用现有分组/过滤逻辑）
             const snapshot = this.buildSnapshot(models);
@@ -589,7 +499,6 @@ export class ReactorCore {
                 const telemetry = await this.fetchAuthorizedTelemetry();
                 this.lastAuthorizedFetchedAt = Date.now();
                 const activeEmail = await credentialStorage.getActiveAccount();
-                await this.persistQuotaCache('authorized', activeEmail, telemetry);
                 this.publishTelemetry(telemetry, 'authorized');
                 return;
             } catch (error) {
@@ -639,7 +548,6 @@ export class ReactorCore {
                 || this.localAccountEmail
                 || null;
             const cacheEmail = rawEmail && rawEmail.includes('@') ? rawEmail : null;
-            await this.persistQuotaCache('local', cacheEmail, telemetry);
             this.publishTelemetry(telemetry, 'local');
         } catch (error) {
             throw this.wrapSyncError(error, 'local');
@@ -837,7 +745,7 @@ export class ReactorCore {
             }
         }
 
-        const models = await this.fetchAuthorizedQuotaModels(accessToken, projectId);
+        const models = await this.fetchAuthorizedQuotaModels(accessToken, projectId, activeAccount ?? undefined);
         const activeAccountAfter = await credentialStorage.getActiveAccount();
         if (this.normalizeAccount(activeAccount) !== this.normalizeAccount(activeAccountAfter)) {
             logger.info('[AuthorizedQuota] Active account changed during fetch, retrying with new account');
@@ -858,13 +766,50 @@ export class ReactorCore {
         return normalized ? normalized : null;
     }
 
-    private async fetchAuthorizedQuotaModels(accessToken: string, projectId?: string): Promise<ModelQuotaInfo[]> {
+    private async fetchAuthorizedQuotaModels(
+        accessToken: string,
+        projectId?: string,
+        email?: string,
+        forceRefresh: boolean = false,
+    ): Promise<ModelQuotaInfo[]> {
+        if (email && !forceRefresh) {
+            const cached = await readQuotaApiCache('authorized', email);
+            if (isApiCacheValid(cached)) {
+                try {
+                    return this.buildModelsFromAuthorizedResponse(cached!.payload as AuthorizedQuotaResponse);
+                } catch (error) {
+                    logger.warn(`[QuotaApiCache] Cached response decode failed: ${error instanceof Error ? error.message : String(error)}`);
+                }
+            }
+        }
+
         logger.info('[AuthorizedQuota] Fetching available models');
         const data = await cloudCodeClient.fetchAvailableModels(
             accessToken,
             projectId,
             { logLabel: 'AuthorizedQuota' },
         ) as AuthorizedQuotaResponse;
+
+        if (email) {
+            try {
+                await writeQuotaApiCache({
+                    version: 1,
+                    source: 'authorized',
+                    customSource: 'plugin',
+                    email,
+                    projectId,
+                    updatedAt: Date.now(),
+                    payload: data,
+                });
+            } catch (error) {
+                logger.warn(`[QuotaApiCache] Failed to write cache: ${error instanceof Error ? error.message : String(error)}`);
+            }
+        }
+
+        return this.buildModelsFromAuthorizedResponse(data);
+    }
+
+    private buildModelsFromAuthorizedResponse(data: AuthorizedQuotaResponse): ModelQuotaInfo[] {
         const models: ModelQuotaInfo[] = [];
         const now = Date.now();
 
@@ -880,7 +825,6 @@ export class ReactorCore {
 
             const remainingFraction = Math.min(1, Math.max(0, quotaInfo.remainingFraction ?? 0));
             
-            // 解析 resetTime，处理无效值的情况
             let resetTime: Date;
             let resetTimeValid = true;
             if (quotaInfo.resetTime) {
@@ -888,13 +832,11 @@ export class ReactorCore {
                 if (!Number.isNaN(parsed.getTime())) {
                     resetTime = parsed;
                 } else {
-                    // 无效的 resetTime 字符串，使用 24 小时后作为备用
                     resetTime = new Date(now + 24 * 60 * 60 * 1000);
                     resetTimeValid = false;
                     logger.warn(`[AuthorizedQuota] Invalid resetTime for model ${modelKey}: ${quotaInfo.resetTime}`);
                 }
             } else {
-                // 没有 resetTime，使用 24 小时后作为备用
                 resetTime = new Date(now + 24 * 60 * 60 * 1000);
                 resetTimeValid = false;
             }
@@ -914,7 +856,6 @@ export class ReactorCore {
                 timeUntilReset,
                 timeUntilResetFormatted: resetTimeValid ? this.formatDelta(timeUntilReset) : (t('common.unknown') || 'Unknown'),
                 resetTimeValid,
-                // 模型能力字段
                 supportsImages: info.supportsImages,
                 isRecommended: info.recommended,
                 tagTitle: info.tagTitle,
@@ -1385,6 +1326,15 @@ export class ReactorCore {
             groups,
             isConnected: true,
         };
+    }
+
+    public buildAuthorizedSnapshotFromResponse(data: unknown, updatedAt?: number): QuotaSnapshot {
+        const models = this.buildModelsFromAuthorizedResponse(data as AuthorizedQuotaResponse);
+        const snapshot = this.buildSnapshot(models);
+        if (updatedAt) {
+            snapshot.timestamp = new Date(updatedAt);
+        }
+        return snapshot;
     }
 
     private getAuthorizedRecommendedIds(models: ModelQuotaInfo[]): string[] {
