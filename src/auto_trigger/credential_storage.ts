@@ -487,6 +487,30 @@ class CredentialStorage {
         await this.markAccountInvalid(email, false);
     }
 
+    /**
+     * Mark an account as forbidden (403 from Cloud Code)
+     */
+    async markAccountForbidden(email: string, forbidden: boolean = true): Promise<void> {
+        const storage = await this.getCredentialsStorage();
+
+        if (!(email in storage.accounts)) {
+            logger.warn(`[CredentialStorage] Account ${email} not found for marking forbidden`);
+            return;
+        }
+
+        storage.accounts[email].isForbidden = forbidden;
+        await this.saveCredentialsStorage(storage);
+
+        logger.info(`[CredentialStorage] Account ${email} marked as ${forbidden ? 'forbidden' : 'normal'}`);
+    }
+
+    /**
+     * Clear forbidden status when refresh succeeds
+     */
+    async clearAccountForbidden(email: string): Promise<void> {
+        await this.markAccountForbidden(email, false);
+    }
+
     // ============ 自动导入黑名单逻辑已移除 ============
 
     /**

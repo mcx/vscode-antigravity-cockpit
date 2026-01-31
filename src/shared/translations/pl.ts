@@ -758,4 +758,5 @@ export const pl = {
     'accountsRefresh.refreshCooldown': 'Proszę odczekać {seconds} sekund przed odświeżeniem',
     'accountsRefresh.notImported': 'Konto niezaimportowane do wtyczki',
     'accountsRefresh.authExpired': 'Autoryzacja wygasła, zaloguj się ponownie',
+    'accountsRefresh.forbidden': 'Konto zabronione, pominięto automatyczne odświeżanie',
 };

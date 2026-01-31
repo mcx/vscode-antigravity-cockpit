@@ -758,4 +758,5 @@ export const it = {
     'accountsRefresh.refreshCooldown': 'Attendi {seconds} secondi prima di aggiornare',
     'accountsRefresh.notImported': 'Account non importato nell\'estensione',
     'accountsRefresh.authExpired': 'Autorizzazione scaduta, rieffettua l’accesso',
+    'accountsRefresh.forbidden': 'Account vietato, aggiornamento automatico saltato',
 };

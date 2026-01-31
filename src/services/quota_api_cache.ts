@@ -15,7 +15,8 @@ export interface QuotaApiCacheRecord {
     payload: unknown;
 }
 
-const CACHE_ROOT = path.join(os.homedir(), '.antigravity_cockpit', 'cache', 'quota_api_v1');
+// 插件端在同一根目录下使用独立子目录，避免与桌面端共享/覆盖
+const CACHE_ROOT = path.join(os.homedir(), '.antigravity_cockpit', 'cache', 'quota_api_v1_plugin');
 
 function normalizeEmail(email: string): string {
     return email.trim().toLowerCase();

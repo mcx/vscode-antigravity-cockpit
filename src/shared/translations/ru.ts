@@ -758,4 +758,5 @@ export const ru = {
     'accountsRefresh.refreshCooldown': 'Пожалуйста, подождите {seconds} сек. перед обновлением',
     'accountsRefresh.notImported': 'Аккаунт не импортирован в плагин',
     'accountsRefresh.authExpired': 'Срок действия авторизации истек, войдите снова',
+    'accountsRefresh.forbidden': 'Аккаунт запрещён, автообновление пропущено',
 };

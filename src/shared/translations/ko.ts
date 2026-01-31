@@ -757,4 +757,5 @@ export const ko = {
     'accountsRefresh.refreshCooldown': '{seconds}초 후 다시 시도해 주세요',
     'accountsRefresh.notImported': '플러그인에 가져오지 않은 계정입니다',
     'accountsRefresh.authExpired': '인증이 만료되었습니다. 다시 로그인해 주세요',
+    'accountsRefresh.forbidden': '계정 금지됨, 자동 새로고침 건너뜀',
 };

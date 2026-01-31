@@ -760,4 +760,5 @@ export const fr = {
     'accountsRefresh.refreshCooldown': 'Veuillez patienter {seconds} secondes avant d\'actualiser',
     'accountsRefresh.notImported': 'Compte non importé dans l\'extension',
     'accountsRefresh.authExpired': 'L\'autorisation a expiré, veuillez vous reconnecter',
+    'accountsRefresh.forbidden': 'Compte interdit, actualisation automatique ignorée',
 };

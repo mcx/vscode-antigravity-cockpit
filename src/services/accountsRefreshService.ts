@@ -27,6 +27,8 @@ export interface AccountState {
     // 异常状态（从 credentialStorage 同步）
     isInvalid?: boolean;        // Token 失效（需重新授权）
     invalidReason?: string;     // 失效原因（用于UI显示）
+    isForbidden?: boolean;      // 403 无权限（跳过自动刷新）
+    forbiddenReason?: string;   // 无权限原因（用于UI显示）
     expiresAt?: string;         // Token 过期时间
 }
 
@@ -131,7 +133,7 @@ export class AccountsRefreshService {
         }
 
         this.lastManualRefresh = now;
-        await this.refresh();
+        await this.refresh({ reason: 'manualRefresh', allowForbidden: true });
         return true;
     }
 
@@ -169,7 +171,7 @@ export class AccountsRefreshService {
         return this.startupRefreshPromise;
     }
 
-    async refresh(options?: { forceSync?: boolean; skipSync?: boolean; skipQuotaRefresh?: boolean; reason?: string }): Promise<void> {
+    async refresh(options?: { forceSync?: boolean; skipSync?: boolean; skipQuotaRefresh?: boolean; reason?: string; allowForbidden?: boolean }): Promise<void> {
         if (this.refreshInFlight) {
             return this.refreshInFlight;
         }
@@ -195,6 +197,7 @@ export class AccountsRefreshService {
                 this.emitUpdate();
 
                 // 刷新配额（可选跳过）
+                const allowForbidden = options?.allowForbidden ?? false;
                 if (!options?.skipQuotaRefresh) {
                     const emails: string[] = [];
                     for (const [email, account] of this.accounts) {
@@ -204,6 +207,10 @@ export class AccountsRefreshService {
                         }
                         if (account.isInvalid) {
                             this.setErrorCache(email, account.invalidReason || t('accountsRefresh.authExpired'));
+                            continue;
+                        }
+                        if (account.isForbidden && !allowForbidden) {
+                            this.setForbiddenCache(email);
                             continue;
                         }
                         emails.push(email);
@@ -222,8 +229,18 @@ export class AccountsRefreshService {
                                 error: undefined,
                             };
                             this.quotaCache.set(email, cache);
+                            await this.clearAccountForbiddenState(email);
                         } else if (!result.success) {
-                            this.setErrorCache(email, result.error || 'Unknown error');
+                            if (result.error && this.isForbiddenError(result.error)) {
+                                await this.setAccountForbiddenState(email);
+                                if (allowForbidden) {
+                                    this.setErrorCache(email, result.error || '403 Forbidden');
+                                } else {
+                                    this.setForbiddenCache(email);
+                                }
+                            } else {
+                                this.setErrorCache(email, result.error || 'Unknown error');
+                            }
                         }
                     }
                     this.emitUpdate();
@@ -273,6 +290,10 @@ export class AccountsRefreshService {
                     this.setErrorCache(email, account.invalidReason || t('accountsRefresh.authExpired'));
                     continue;
                 }
+                if (account.isForbidden) {
+                    this.setForbiddenCache(email);
+                    continue;
+                }
                 emails.push(email);
             }
 
@@ -288,8 +309,14 @@ export class AccountsRefreshService {
                         error: undefined,
                     };
                     this.quotaCache.set(email, cache);
+                    await this.clearAccountForbiddenState(email);
                 } else if (!result.success) {
-                    this.setErrorCache(email, result.error || 'Unknown error');
+                    if (result.error && this.isForbiddenError(result.error)) {
+                        await this.setAccountForbiddenState(email);
+                        this.setForbiddenCache(email);
+                    } else {
+                        this.setErrorCache(email, result.error || 'Unknown error');
+                    }
                     
                     // 检查是否为授权失败
                     if (result.error && this.isAuthError(result.error)) {
@@ -318,6 +345,11 @@ export class AccountsRefreshService {
             || error.includes('UNAUTHENTICATED')
             || error.includes('invalid authentication credentials')
             || error.includes('Expected OAuth 2 access token');
+    }
+
+    private isForbiddenError(error: string): boolean {
+        const normalized = error.toLowerCase();
+        return normalized.includes('403') || normalized.includes('forbidden');
     }
 
     /**
@@ -353,10 +385,16 @@ export class AccountsRefreshService {
             cache.fetchedAt = Date.now();
             cache.loading = false;
             cache.error = undefined;
+            await this.clearAccountForbiddenState(email);
             logger.info(`[AccountsRefresh] Loaded quota for ${email}: ${result.snapshot.models.length} models, ${result.snapshot.groups?.length ?? 0} groups`);
         } else {
             cache.loading = false;
-            cache.error = result.error || 'Unknown error';
+            if (result.error && this.isForbiddenError(result.error)) {
+                await this.setAccountForbiddenState(email);
+                cache.error = result.error || '403 Forbidden';
+            } else {
+                cache.error = result.error || 'Unknown error';
+            }
             logger.error(`[AccountsRefresh] Failed to load quota for ${email}:`, result.error);
             
             // 检查是否为授权失败
@@ -467,6 +505,8 @@ export class AccountsRefreshService {
                 // 合并凭证异常状态
                 isInvalid: credential?.isInvalid ?? false,
                 invalidReason: credential?.isInvalid ? t('accountsRefresh.authExpired') : undefined,
+                isForbidden: credential?.isForbidden ?? false,
+                forbiddenReason: credential?.isForbidden ? t('accountsRefresh.forbidden') : undefined,
                 expiresAt: credential?.expiresAt,
             });
         }
@@ -522,6 +562,8 @@ export class AccountsRefreshService {
                 // 合并凭证异常状态
                 isInvalid: credential?.isInvalid ?? false,
                 invalidReason: credential?.isInvalid ? t('accountsRefresh.authExpired') : undefined,
+                isForbidden: credential?.isForbidden ?? false,
+                forbiddenReason: credential?.isForbidden ? t('accountsRefresh.forbidden') : undefined,
                 expiresAt: credential?.expiresAt,
             });
         }
@@ -564,6 +606,13 @@ export class AccountsRefreshService {
                 skipReason: account.invalidReason || t('accountsRefresh.authExpired'), 
             };
         }
+
+        if (account.isForbidden) {
+            return {
+                canRefresh: false,
+                skipReason: account.forbiddenReason || t('accountsRefresh.forbidden'),
+            };
+        }
         
         return { canRefresh: true };
     }
@@ -577,6 +626,39 @@ export class AccountsRefreshService {
         };
         this.quotaCache.set(email, cache);
         this.emitUpdate();
+    }
+
+    private setForbiddenCache(email: string): void {
+        const cache: AccountQuotaCache = {
+            snapshot: { timestamp: new Date(), models: [], isConnected: false },
+            fetchedAt: Date.now(),
+            loading: false,
+            error: t('accountsRefresh.forbidden'),
+        };
+        this.quotaCache.set(email, cache);
+        this.emitUpdate();
+    }
+
+    private async setAccountForbiddenState(email: string): Promise<void> {
+        const account = this.accounts.get(email);
+        if (account) {
+            account.isForbidden = true;
+            account.forbiddenReason = t('accountsRefresh.forbidden');
+        }
+        await credentialStorage.markAccountForbidden(email, true);
+        this.emitUpdate();
+        logger.warn(`[AccountsRefresh] Account ${email} marked as forbidden (403)`);
+    }
+
+    private async clearAccountForbiddenState(email: string): Promise<void> {
+        const account = this.accounts.get(email);
+        if (account?.isForbidden) {
+            account.isForbidden = false;
+            account.forbiddenReason = undefined;
+            await credentialStorage.clearAccountForbidden(email);
+            this.emitUpdate();
+            logger.info(`[AccountsRefresh] Cleared forbidden status for ${email}`);
+        }
     }
 
     /**

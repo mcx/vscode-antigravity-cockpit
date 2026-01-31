@@ -758,4 +758,5 @@ export const cs = {
     'accountsRefresh.refreshCooldown': 'Please wait {seconds} seconds before refreshing',
     'accountsRefresh.notImported': 'Account not imported to plugin',
     'accountsRefresh.authExpired': 'Platnost autorizace vypršela, přihlaste se prosím znovu',
+    'accountsRefresh.forbidden': 'Účet zakázán, automatická aktualizace přeskočena',
 };

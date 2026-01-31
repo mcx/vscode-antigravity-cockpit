@@ -758,4 +758,5 @@ export const ar = {
     'accountsRefresh.refreshCooldown': 'Please wait {seconds} seconds before refreshing',
     'accountsRefresh.notImported': 'Account not imported to plugin',
     'accountsRefresh.authExpired': 'انتهت صلاحية التفويض، يرجى تسجيل الدخول مرة أخرى',
+    'accountsRefresh.forbidden': 'الحساب لا يملك صلاحية، تم تخطي التحديث التلقائي',
 };

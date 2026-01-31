@@ -771,4 +771,5 @@ export const zhCN = {
     'accountsRefresh.refreshCooldown': '请等待 {seconds} 秒后再刷新',
     'accountsRefresh.notImported': '插件未导入该账号',
     'accountsRefresh.authExpired': '授权已过期，请重新登录',
+    'accountsRefresh.forbidden': '账号无权限，已跳过自动刷新',
 };

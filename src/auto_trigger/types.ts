@@ -17,6 +17,8 @@ export interface OAuthCredential {
     email?: string;
     /** True if refresh token is invalid (marked when refresh fails) */
     isInvalid?: boolean;
+    /** True if account is forbidden (403 from cloud code) */
+    isForbidden?: boolean;
 }
 
 /**

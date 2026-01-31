@@ -756,4 +756,5 @@ export const de = {
     'accountsRefresh.refreshCooldown': 'Bitte warten Sie {seconds} Sekunden vor der nächsten Aktualisierung',
     'accountsRefresh.notImported': 'Konto nicht in das Plugin importiert',
     'accountsRefresh.authExpired': 'Autorisierung abgelaufen, bitte melden Sie sich erneut an',
+    'accountsRefresh.forbidden': 'Konto verboten, automatische Aktualisierung übersprungen',
 };

@@ -795,4 +795,5 @@ export const vi = {
     'accountsRefresh.refreshCooldown': 'Vui lòng chờ {seconds} giây trước khi làm mới',
     'accountsRefresh.notImported': 'Tài khoản chưa được nhập vào plugin',
     'accountsRefresh.authExpired': 'Ủy quyền đã hết hạn, vui lòng đăng nhập lại',
+    'accountsRefresh.forbidden': 'Tài khoản không có quyền, đã bỏ qua tự động làm mới',
 };

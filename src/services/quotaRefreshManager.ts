@@ -140,7 +140,7 @@ export class QuotaRefreshManager {
         const credentials = await credentialStorage.getAllCredentials();
         const emails = Object.keys(credentials).filter(email => {
             const cred = credentials[email];
-            return cred && !cred.isInvalid;
+            return cred && !cred.isInvalid && !cred.isForbidden;
         });
 
         logger.info(`[QuotaRefresh] Refreshing all ${emails.length} accounts (reason: ${options?.reason ?? 'all'})`);

@@ -771,4 +771,5 @@ export const en = {
     'accountsRefresh.refreshCooldown': 'Please wait {seconds} seconds before refreshing',
     'accountsRefresh.notImported': 'Account not imported to plugin',
     'accountsRefresh.authExpired': 'Authorization expired, please sign in again',
+    'accountsRefresh.forbidden': 'Account forbidden, skipped auto refresh',
 };

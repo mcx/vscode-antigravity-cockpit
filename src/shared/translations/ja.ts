@@ -757,4 +757,5 @@ export const ja = {
     'accountsRefresh.refreshCooldown': '{seconds} 秒待ってから更新してください',
     'accountsRefresh.notImported': 'プラグインにインポートされていないアカウントです',
     'accountsRefresh.authExpired': '認証の期限が切れました。再ログインしてください',
+    'accountsRefresh.forbidden': 'アカウント禁止、自動更新をスキップしました',
 };

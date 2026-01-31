@@ -776,4 +776,5 @@ export const zhTW = {
     'accountsRefresh.refreshCooldown': '請等待 {seconds} 秒後再重新整理',
     'accountsRefresh.notImported': '插件未匯入該帳號',
     'accountsRefresh.authExpired': '授權已過期，請重新登入',
+    'accountsRefresh.forbidden': '帳號無權限，已跳過自動刷新',
 };

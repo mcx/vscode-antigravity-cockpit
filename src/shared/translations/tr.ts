@@ -761,4 +761,5 @@ export const tr = {
     'accountsRefresh.refreshCooldown': 'Yenilemeden önce lütfen {seconds} saniye bekleyin',
     'accountsRefresh.notImported': 'Hesap eklentiye aktarılmadı',
     'accountsRefresh.authExpired': 'Yetkilendirme süresi doldu, lütfen tekrar giriş yapın',
+    'accountsRefresh.forbidden': 'Hesap yasaklı, otomatik yenileme atlandı',
 };

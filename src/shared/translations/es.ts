@@ -756,4 +756,5 @@ export const es = {
     'accountsRefresh.refreshCooldown': 'Por favor, espere {seconds} segundos antes de actualizar',
     'accountsRefresh.notImported': 'Cuenta no importada al plugin',
     'accountsRefresh.authExpired': 'La autorización ha caducado, inicie sesión de nuevo',
+    'accountsRefresh.forbidden': 'Cuenta prohibida, actualización automática omitida',
 };

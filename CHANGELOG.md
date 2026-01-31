@@ -8,6 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.9]
+
+### Added
+- **403 Forbidden State Management**: Unified forbidden account flag (`isForbidden`) with a 🔒 red lock icon and "No Permission" tooltip in the sidebar.
+  - Detects 403 Forbidden errors and automatically marks account state
+  - Automatically skips quota refresh for forbidden accounts
+
+### Changed
+- **Cache directory isolation**: Extension quota cache moved to `quota_api_v1_plugin` to prevent sharing/overwriting with the desktop app.
+
+### i18n
+- **Internationalization**: Added `accountsRefresh.forbidden` translation key for all supported languages.
+
 ## [2.1.8]
 
 ### Added

@@ -40,13 +40,17 @@ export class AccountNode extends vscode.TreeItem {
         public readonly isCurrent: boolean,
         public readonly hasDeviceBound: boolean,
         public readonly isInvalid?: boolean,
+        public readonly isForbidden?: boolean,
     ) {
         super(email, vscode.TreeItemCollapsibleState.Expanded);
 
-        // 图标优先级：失效 > 当前 > 普通
+        // 图标优先级：失效 > 无权限 > 当前 > 普通
         if (isInvalid) {
             // ⚠️ 失效账号显示警告图标（红色）
             this.iconPath = new vscode.ThemeIcon('warning', new vscode.ThemeColor('errorForeground'));
+        } else if (isForbidden) {
+            // 🔒 无权限账号显示锁图标（红色）
+            this.iconPath = new vscode.ThemeIcon('lock', new vscode.ThemeColor('errorForeground'));
         } else if (isCurrent) {
             // ⭐ 当前账号显示星星
             this.iconPath = new vscode.ThemeIcon('star-full', new vscode.ThemeColor('charts.yellow'));
@@ -59,6 +63,7 @@ export class AccountNode extends vscode.TreeItem {
         const parts = [
             `${t('accountTree.tooltipEmail')}: ${email}`,
             isInvalid ? `⚠️ ${t('accountsRefresh.authExpired')}` : '',
+            isForbidden ? `🔒 ${t('accountsRefresh.forbidden')}` : '',
             isCurrent && !isInvalid ? t('accountTree.currentAccount') : '',
             hasDeviceBound ? t('accountTree.fingerprintBound') : t('accountTree.fingerprintUnbound'),
         ].filter(Boolean);
@@ -257,7 +262,15 @@ export class AccountTreeProvider implements vscode.TreeDataProvider<AccountTreeI
         // 保持账号原始顺序，不按当前账号排序
         const nodes: AccountNode[] = [];
         for (const [email, account] of accounts) {
-            nodes.push(new AccountNode(email, account.isCurrent, account.hasDeviceBound, account.isInvalid));
+            nodes.push(
+                new AccountNode(
+                    email,
+                    account.isCurrent,
+                    account.hasDeviceBound,
+                    account.isInvalid,
+                    account.isForbidden,
+                ),
+            );
         }
 
         return nodes;

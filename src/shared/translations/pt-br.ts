@@ -758,4 +758,5 @@ export const ptBR = {
     'accountsRefresh.refreshCooldown': 'Aguarde {seconds} segundos antes de atualizar',
     'accountsRefresh.notImported': 'Conta não importada para o plugin',
     'accountsRefresh.authExpired': 'A autorização expirou, faça login novamente',
+    'accountsRefresh.forbidden': 'Conta proibida, atualização automática ignorada',
 };
