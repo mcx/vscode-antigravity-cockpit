@@ -1757,12 +1757,12 @@ import { createAnnouncementModule } from './dashboard_announcements';
                 // 使用远端 API + 本地账户
                 card.classList.remove('hidden');
                 // 切换至当前登录账户按钮
-                const switchToClientBtn = `<button class="quota-account-manage-btn at-switch-to-client-btn-local" title="${i18n['autoTrigger.switchToClientAccount'] || '切换至当前登录账户'}">${i18n['autoTrigger.switchToClientAccount'] || '切换至当前登录账户'}</button>`;
+                const switchToClientBtn = `<button class="quota-account-manage-btn at-switch-to-client-btn-local" title="${escapeHtml(i18n['autoTrigger.switchToClientAccount'] || '切换至当前登录账户')}">${escapeHtml(i18n['autoTrigger.switchToClientAccount'] || '切换至当前登录账户')}</button>`;
                 row.innerHTML = `
                     <div class="quota-auth-info">
                         <span class="quota-auth-icon">👤</span>
-                        <span class="quota-auth-text">${i18n['quotaSource.localAccountLabel'] || '当前账户'}</span>
-                        <span class="quota-auth-email">${localEmail}</span>
+                        <span class="quota-auth-text">${escapeHtml(i18n['quotaSource.localAccountLabel'] || '当前账户')}</span>
+                        <span class="quota-auth-email">${escapeHtml(localEmail)}</span>
                         ${switchToClientBtn}
                     </div>
                 `;
@@ -1800,15 +1800,15 @@ import { createAnnouncementModule } from './dashboard_announcements';
             const _hasMultipleAccounts = accounts.length > 1;
             const extraCount = Math.max(accounts.length - 1, 0);
             const accountCountBadge = extraCount > 0
-                ? `<span class="account-count-badge" title="${i18n['autoTrigger.manageAccounts'] || 'Manage Accounts'}">+${extraCount}</span>`
+                ? `<span class="account-count-badge" title="${escapeHtml(i18n['autoTrigger.manageAccounts'] || 'Manage Accounts')}">+${extraCount}</span>`
                 : '';
-            const manageBtn = `<button id="quota-account-manage-btn" class="quota-account-manage-btn" title="${i18n['autoTrigger.manageAccounts']}">${i18n['autoTrigger.manageAccounts']}</button>`;
+            const manageBtn = `<button id="quota-account-manage-btn" class="quota-account-manage-btn" title="${escapeHtml(i18n['autoTrigger.manageAccounts'])}">${escapeHtml(i18n['autoTrigger.manageAccounts'])}</button>`;
             
             row.innerHTML = `
-                <div class="quota-auth-info quota-auth-info-clickable" title="${i18n['autoTrigger.manageAccounts']}">
+                <div class="quota-auth-info quota-auth-info-clickable" title="${escapeHtml(i18n['autoTrigger.manageAccounts'])}">
                     <span class="quota-auth-icon">✅</span>
-                    <span class="quota-auth-text">${i18n['autoTrigger.authorized']}</span>
-                    <span class="quota-auth-email">${activeEmail}</span>
+                    <span class="quota-auth-text">${escapeHtml(i18n['autoTrigger.authorized'])}</span>
+                    <span class="quota-auth-email">${escapeHtml(activeEmail)}</span>
                     ${accountCountBadge}
                     ${manageBtn}
                 </div>
@@ -2224,8 +2224,8 @@ import { createAnnouncementModule } from './dashboard_announcements';
             const checked = modelManagerSelection.has(model.modelId) ? 'checked' : '';
             return `
                 <label class="model-manager-item">
-                    <input type="checkbox" data-model-id="${model.modelId}" ${checked}>
-                    <span>${displayName}</span>
+                    <input type="checkbox" data-model-id="${escapeHtml(model.modelId)}" ${checked}>
+                    <span>${escapeHtml(displayName)}</span>
                 </label>
             `;
         }).join('');
@@ -2792,9 +2792,9 @@ import { createAnnouncementModule } from './dashboard_announcements';
                     const model = customGroupingState.allModels.find(m => m.modelId === modelId);
                     const name = model ? (currentConfig.modelCustomNames?.[modelId] || model.label) : modelId;
                     return `
-                        <span class="custom-model-tag" data-model-id="${modelId}">
-                            ${name}
-                            <button class="remove-model-btn" data-group-index="${index}" data-model-id="${modelId}" title="${i18n['customGrouping.removeModel'] || 'Remove'}">×</button>
+                        <span class="custom-model-tag" data-model-id="${escapeHtml(modelId)}">
+                            ${escapeHtml(name)}
+                            <button class="remove-model-btn" data-group-index="${index}" data-model-id="${escapeHtml(modelId)}" title="${escapeHtml(i18n['customGrouping.removeModel'] || 'Remove')}">×</button>
                         </span>
                     `;
                 }).join('');
@@ -2804,16 +2804,16 @@ import { createAnnouncementModule } from './dashboard_announcements';
                         <div class="custom-group-header">
                             <div class="custom-group-name">
                                 <span>📦</span>
-                                <input type="text" value="${group.name}" data-group-index="${index}" placeholder="Group name...">
+                                <input type="text" value="${escapeHtml(group.name)}" data-group-index="${index}" placeholder="Group name...">
                             </div>
                             <div class="custom-group-actions">
-                                <button class="delete-group-btn" data-group-index="${index}" title="${i18n['customGrouping.deleteGroup'] || 'Delete Group'}">🗑️</button>
+                                <button class="delete-group-btn" data-group-index="${index}" title="${escapeHtml(i18n['customGrouping.deleteGroup'] || 'Delete Group')}">🗑️</button>
                             </div>
                         </div>
                         <div class="custom-group-models">
                             ${modelsHtml}
                             <button class="add-model-btn" data-group-index="${index}">
-                                ➕ ${i18n['customGrouping.addModel'] || 'Add Model'}
+                                ➕ ${escapeHtml(i18n['customGrouping.addModel'] || 'Add Model')}
                             </button>
                         </div>
                     </div>
@@ -2845,8 +2845,8 @@ import { createAnnouncementModule } from './dashboard_announcements';
                 const name = currentConfig.modelCustomNames?.[model.modelId] || model.label;
                 const quotaPct = (model.remainingPercentage || 0).toFixed(0);
                 return `
-                    <div class="ungrouped-model-item" data-model-id="${model.modelId}" title="${model.modelId}">
-                        ${name}
+                    <div class="ungrouped-model-item" data-model-id="${escapeHtml(model.modelId)}" title="${escapeHtml(model.modelId)}">
+                        ${escapeHtml(name)}
                         <span class="quota-badge">${quotaPct}%</span>
                     </div>
                 `;
@@ -2984,14 +2984,14 @@ import { createAnnouncementModule } from './dashboard_announcements';
 
             return `
                         <label class="model-select-item ${isCompatible ? '' : 'disabled'}" 
-                             data-model-id="${model.modelId}" 
+                             data-model-id="${escapeHtml(model.modelId)}" 
                              data-compatible="${isCompatible}">
                             <input type="checkbox" class="model-checkbox" 
-                                   value="${model.modelId}" 
+                                   value="${escapeHtml(model.modelId)}" 
                                    ${isCompatible ? '' : 'disabled'}>
-                            <span class="model-name">${name}</span>
+                            <span class="model-name">${escapeHtml(name)}</span>
                             <span class="model-quota">${quotaPct}%</span>
-                            ${!isCompatible ? `<span class="incompatible-reason">${incompatibleReason}</span>` : ''}
+                            ${!isCompatible ? `<span class="incompatible-reason">${escapeHtml(incompatibleReason)}</span>` : ''}
                         </label>
                     `;
         }).join('')}
@@ -2999,7 +2999,7 @@ import { createAnnouncementModule } from './dashboard_announcements';
             ${hasCompatibleModels ? `
                 <div class="model-select-footer">
                     <button class="btn-confirm-add" disabled>
-                        ${i18n['customGrouping.addModel'] || 'Add'} (<span class="selected-count">0</span>)
+                        ${escapeHtml(i18n['customGrouping.addModel'] || 'Add')} (<span class="selected-count">0</span>)
                     </button>
                 </div>
             ` : ''}
@@ -3290,10 +3290,10 @@ import { createAnnouncementModule } from './dashboard_announcements';
 
         card.innerHTML = `
             <div class="card-title">
-                <span class="label">${i18n['profile.details'] || 'Plan Details'}</span>
+                <span class="label">${escapeHtml(i18n['profile.details'] || 'Plan Details')}</span>
                 <div class="profile-controls">
-                    <button class="text-btn" id="profile-mask-btn">${maskBtnText}</button>
-                    <div class="tier-badge">${userInfo.tier}</div>
+                    <button class="text-btn" id="profile-mask-btn">${escapeHtml(maskBtnText)}</button>
+                    <div class="tier-badge">${escapeHtml(userInfo.tier)}</div>
                 </div>
             </div>
             
@@ -3453,6 +3453,12 @@ import { createAnnouncementModule } from './dashboard_announcements';
             .replace(/'/g, "&#039;");
     }
 
+    // 安全的 CSS class 名称
+    function sanitizeClassName(value) {
+        if (!value || typeof value !== 'string') return '';
+        return value.replace(/[^a-zA-Z0-9_-]/g, '');
+    }
+
     /**
      * 解析模型能力，返回能力列表
      */
@@ -3530,18 +3536,18 @@ import { createAnnouncementModule } from './dashboard_announcements';
                 capsIndicator = `<span class="caps-dot">✨</span>`;
             }
 
-            return `<span class="group-model-tag${recClass}" title="${m.modelId}"${tooltipAttr}>${m.label}${tagHtml}${capsIndicator}</span>`;
+            return `<span class="group-model-tag${recClass}" title="${escapeHtml(m.modelId)}"${tooltipAttr}>${escapeHtml(m.label)}${tagHtml}${capsIndicator}</span>`;
         }).join('');
 
         card.innerHTML = `
             <div class="card-title">
-                <span class="drag-handle" data-tooltip="${i18n['dashboard.dragHint'] || 'Drag to reorder'}">⋮⋮</span>
+                <span class="drag-handle" data-tooltip="${escapeHtml(i18n['dashboard.dragHint'] || 'Drag to reorder')}">⋮⋮</span>
                 <span class="group-icon">📦</span>
-                <span class="label group-name">${group.groupName}</span>
+                <span class="label group-name">${escapeHtml(group.groupName)}</span>
                 <div class="actions">
-                    <button class="rename-group-btn icon-btn" data-group-id="${group.groupId}" data-tooltip-html="${encodeURIComponent('<div class="rich-tooltip-item"><span class="text">' + (i18n['grouping.rename'] || 'Rename') + '</span></div>')}">✏️</button>
-                    <label class="switch" data-tooltip-html="${encodeURIComponent('<div class="rich-tooltip-item"><span class="text">' + (i18n['dashboard.pinHint'] || 'Pin to Status Bar') + '</span></div>')}">
-                        <input type="checkbox" class="group-pin-toggle" data-group-id="${group.groupId}" ${isPinned ? 'checked' : ''}>
+                    <button class="rename-group-btn icon-btn" data-group-id="${escapeHtml(group.groupId)}" data-tooltip-html="${encodeURIComponent('<div class="rich-tooltip-item"><span class="text">' + escapeHtml(i18n['grouping.rename'] || 'Rename') + '</span></div>')}">✏️</button>
+                    <label class="switch" data-tooltip-html="${encodeURIComponent('<div class="rich-tooltip-item"><span class="text">' + escapeHtml(i18n['dashboard.pinHint'] || 'Pin to Status Bar') + '</span></div>')}">
+                        <input type="checkbox" class="group-pin-toggle" data-group-id="${escapeHtml(group.groupId)}" ${isPinned ? 'checked' : ''}>
                         <span class="slider"></span>
                     </label>
                     <span class="status-dot" style="background-color: ${color}"></span>
@@ -3551,21 +3557,21 @@ import { createAnnouncementModule } from './dashboard_announcements';
                 <div class="percentage">${pct.toFixed(2)}%</div>
             </div>
             <div class="info-row">
-                <span>${i18n['dashboard.resetIn'] || 'Reset In'}</span>
-                <span class="info-value">${group.timeUntilResetFormatted}</span>
+                <span>${escapeHtml(i18n['dashboard.resetIn'] || 'Reset In')}</span>
+                <span class="info-value">${escapeHtml(group.timeUntilResetFormatted)}</span>
             </div>
             <div class="info-row">
-                <span>${i18n['dashboard.resetTime'] || 'Reset Time'}</span>
-                <span class="info-value small">${group.resetTimeDisplay || 'N/A'}</span>
+                <span>${escapeHtml(i18n['dashboard.resetTime'] || 'Reset Time')}</span>
+                <span class="info-value small">${escapeHtml(group.resetTimeDisplay || 'N/A')}</span>
             </div>
             <div class="info-row">
-                <span>${i18n['dashboard.status'] || 'Status'}</span>
+                <span>${escapeHtml(i18n['dashboard.status'] || 'Status')}</span>
                 <span class="info-value" style="color: ${color}">
                     ${getStatusText(pct)}
                 </span>
             </div>
             <div class="group-models">
-                <div class="group-models-label">${i18n['grouping.models'] || 'Models'} (${group.models.length}):</div>
+                <div class="group-models-label">${escapeHtml(i18n['grouping.models'] || 'Models')} (${group.models.length}):</div>
                 <div class="group-models-list">${modelList}</div>
             </div>
         `;
@@ -3639,16 +3645,16 @@ import { createAnnouncementModule } from './dashboard_announcements';
 
         card.innerHTML = `
             <div class="card-title">
-                <span class="drag-handle" data-tooltip="${i18n['dashboard.dragHint'] || 'Drag to reorder'}">⋮⋮</span>
+                <span class="drag-handle" data-tooltip="${escapeHtml(i18n['dashboard.dragHint'] || 'Drag to reorder')}">⋮⋮</span>
                 <div class="title-wrapper"${tooltipAttr}>
-                    <span class="label model-name" title="${model.modelId} (${originalLabel})">${displayName}</span>
+                    <span class="label model-name" title="${escapeHtml(model.modelId)} (${escapeHtml(originalLabel)})">${escapeHtml(displayName)}</span>
                     ${tagHtml}
                     ${capsIconHtml}
                 </div>
                 <div class="actions">
-                    <button class="rename-model-btn icon-btn" data-model-id="${model.modelId}" data-tooltip-html="${encodeURIComponent('<div class="rich-tooltip-item"><span class="text">' + (i18n['model.rename'] || 'Rename') + '</span></div>')}">✏️</button>
-                    <label class="switch" data-tooltip-html="${encodeURIComponent('<div class="rich-tooltip-item"><span class="text">' + (i18n['dashboard.pinHint'] || 'Pin to Status Bar') + '</span></div>')}">
-                        <input type="checkbox" class="pin-toggle" data-model-id="${model.modelId}" ${isPinned ? 'checked' : ''}>
+                    <button class="rename-model-btn icon-btn" data-model-id="${escapeHtml(model.modelId)}" data-tooltip-html="${encodeURIComponent('<div class="rich-tooltip-item"><span class="text">' + escapeHtml(i18n['model.rename'] || 'Rename') + '</span></div>')}">✏️</button>
+                    <label class="switch" data-tooltip-html="${encodeURIComponent('<div class="rich-tooltip-item"><span class="text">' + escapeHtml(i18n['dashboard.pinHint'] || 'Pin to Status Bar') + '</span></div>')}">
+                        <input type="checkbox" class="pin-toggle" data-model-id="${escapeHtml(model.modelId)}" ${isPinned ? 'checked' : ''}>
                         <span class="slider"></span>
                     </label>
                     <span class="status-dot" style="background-color: ${color}"></span>
@@ -3658,15 +3664,15 @@ import { createAnnouncementModule } from './dashboard_announcements';
                 <div class="percentage">${pct.toFixed(2)}%</div>
             </div>
             <div class="info-row">
-                <span>${i18n['dashboard.resetIn'] || 'Reset In'}</span>
-                <span class="info-value">${model.timeUntilResetFormatted}</span>
+                <span>${escapeHtml(i18n['dashboard.resetIn'] || 'Reset In')}</span>
+                <span class="info-value">${escapeHtml(model.timeUntilResetFormatted)}</span>
             </div>
             <div class="info-row">
-                <span>${i18n['dashboard.resetTime'] || 'Reset Time'}</span>
-                <span class="info-value small">${model.resetTimeDisplay || 'N/A'}</span>
+                <span>${escapeHtml(i18n['dashboard.resetTime'] || 'Reset Time')}</span>
+                <span class="info-value small">${escapeHtml(model.resetTimeDisplay || 'N/A')}</span>
             </div>
             <div class="info-row">
-                <span>${i18n['dashboard.status'] || 'Status'}</span>
+                <span>${escapeHtml(i18n['dashboard.status'] || 'Status')}</span>
                 <span class="info-value" style="color: ${color}">
                     ${getStatusText(pct)}
                 </span>

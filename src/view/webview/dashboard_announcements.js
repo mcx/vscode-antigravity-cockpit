@@ -14,6 +14,27 @@ export function createAnnouncementModule({
     let currentPopupAnnouncement = null;
     let shownPopupIds = new Set();
 
+    // 验证并清理 URL，防止 javascript: 等危险协议
+    function sanitizeUrl(url) {
+        if (!url || typeof url !== 'string') return '';
+        const trimmed = url.trim();
+        // 只允许 http, https, data (用于图片) 协议
+        if (/^(https?:|data:image\/)/i.test(trimmed)) {
+            return trimmed;
+        }
+        // 相对路径也允许
+        if (trimmed.startsWith('/') || trimmed.startsWith('./')) {
+            return trimmed;
+        }
+        return '';
+    }
+
+    // 安全的 CSS class 名称
+    function sanitizeClassName(value) {
+        if (!value || typeof value !== 'string') return '';
+        return value.replace(/[^a-zA-Z0-9_-]/g, '');
+    }
+
     function initAnnouncementEvents() {
         const announcementBtn = document.getElementById('announcement-btn');
         if (announcementBtn) announcementBtn.addEventListener('click', openAnnouncementList);
@@ -183,7 +204,7 @@ export function createAnnouncementModule({
 
         if (popupType) {
             popupType.textContent = typeLabels[ann.type] || typeLabels.info;
-            popupType.className = `announcement-type-badge ${ann.type}`;
+            popupType.className = `announcement-type-badge ${sanitizeClassName(ann.type)}`;
         }
         if (popupTitle) popupTitle.textContent = ann.title;
 
@@ -195,17 +216,20 @@ export function createAnnouncementModule({
             if (ann.images && ann.images.length > 0) {
                 contentHtml += '<div class="announcement-images">';
                 for (const img of ann.images) {
-                    contentHtml += `
-                        <div class="announcement-image-item">
-                            <img src="${escapeHtml(img.url)}" 
-                                 alt="${escapeHtml(img.alt || img.label || '')}" 
-                                 class="announcement-image"
-                                 data-preview-url="${escapeHtml(img.url)}"
-                                 title="${i18n['announcement.clickToEnlarge'] || 'Click to enlarge'}" />
-                            <div class="image-skeleton"></div>
-                            ${img.label ? `<div class="announcement-image-label">${escapeHtml(img.label)}</div>` : ''}
-                        </div>
-                    `;
+                    const safeImgUrl = sanitizeUrl(img.url);
+                    if (safeImgUrl) {
+                        contentHtml += `
+                            <div class="announcement-image-item">
+                                <img src="${escapeHtml(safeImgUrl)}" 
+                                     alt="${escapeHtml(img.alt || img.label || '')}" 
+                                     class="announcement-image"
+                                     data-preview-url="${escapeHtml(safeImgUrl)}"
+                                     title="${escapeHtml(i18n['announcement.clickToEnlarge'] || 'Click to enlarge')}" />
+                                <div class="image-skeleton"></div>
+                                ${img.label ? `<div class="announcement-image-label">${escapeHtml(img.label)}</div>` : ''}
+                            </div>
+                        `;
+                    }
                 }
                 contentHtml += '</div>';
             }
@@ -228,10 +252,12 @@ export function createAnnouncementModule({
                         imgEl.style.display = 'none';
                         const errorDiv = document.createElement('div');
                         errorDiv.className = 'image-load-error';
-                        errorDiv.innerHTML = `
-                            <span class="icon">🖼️</span>
-                            <span>${i18n['announcement.imageLoadFailed'] || 'Image failed to load'}</span>
-                        `;
+                        const iconSpan = document.createElement('span');
+                        iconSpan.className = 'icon';
+                        iconSpan.textContent = '🖼️';
+                        const textSpan = document.createElement('span');
+                        textSpan.textContent = i18n['announcement.imageLoadFailed'] || 'Image failed to load';
+                        errorDiv.append(iconSpan, textSpan);
                         item.insertBefore(errorDiv, item.firstChild);
                     }
                 });
@@ -383,6 +409,8 @@ export function createAnnouncementModule({
     // ============ 图片预览 ============
 
     function showImagePreview(imageUrl) {
+        const safeUrl = sanitizeUrl(imageUrl);
+        if (!safeUrl) return;
         // 创建预览遮罩
         const overlay = document.createElement('div');
         overlay.className = 'image-preview-overlay';
@@ -390,7 +418,7 @@ export function createAnnouncementModule({
         previewContainer.className = 'image-preview-container';
         const img = document.createElement('img');
         img.className = 'image-preview-img';
-        img.src = imageUrl;
+        img.src = safeUrl;
         const hint = document.createElement('div');
         hint.className = 'image-preview-hint';
         hint.textContent = i18n['announcement.clickToClose'] || 'Click to close';

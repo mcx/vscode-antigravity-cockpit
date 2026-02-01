@@ -118,6 +118,27 @@
             .replace(/'/g, '&#039;');
     }
 
+    // 验证并清理 URL，防止 javascript: 等危险协议
+    function sanitizeUrl(url) {
+        if (!url || typeof url !== 'string') return '';
+        const trimmed = url.trim();
+        // 只允许 http, https, data (用于图片) 协议
+        if (/^(https?:|data:image\/)/i.test(trimmed)) {
+            return trimmed;
+        }
+        // 相对路径也允许
+        if (trimmed.startsWith('/') || trimmed.startsWith('./')) {
+            return trimmed;
+        }
+        return '';
+    }
+
+    // 安全的 CSS class 名称
+    function sanitizeClassName(value) {
+        if (!value || typeof value !== 'string') return '';
+        return value.replace(/[^a-zA-Z0-9_-]/g, '');
+    }
+
     function appendTextWithLineBreaks(container, text) {
         const lines = String(text || '').split('\n');
         lines.forEach((line, index) => {
@@ -329,9 +350,9 @@
         // 有等级信息，显示筛选下拉框容器
         if (filterContainer) filterContainer.classList.remove('hidden');
         elements.filterSelect.innerHTML = `
-            <option value="all">${(getString('filterAll', 'All ({count})')).replace('{count}', counts.all)}</option>
-            <option value="PRO">${(getString('filterPro', 'PRO ({count})')).replace('{count}', counts.PRO)}</option>
-            <option value="ULTRA">${(getString('filterUltra', 'ULTRA ({count})')).replace('{count}', counts.ULTRA)}</option>
+            <option value="all">${escapeHtml((getString('filterAll', 'All ({count})')).replace('{count}', counts.all))}</option>
+            <option value="PRO">${escapeHtml((getString('filterPro', 'PRO ({count})')).replace('{count}', counts.PRO))}</option>
+            <option value="ULTRA">${escapeHtml((getString('filterUltra', 'ULTRA ({count})')).replace('{count}', counts.ULTRA))}</option>
         `;
         elements.filterSelect.value = filterType;
     }
@@ -775,8 +796,8 @@
 
         if (elements.quotaBadges) {
             const tier = getTierLabel(account);
-            const tierClass = getTierClass(tier);
-            elements.quotaBadges.innerHTML = tier ? `<span class="pill ${tierClass}">${tier}</span>` : '';
+            const tierClass = sanitizeClassName(getTierClass(tier));
+            elements.quotaBadges.innerHTML = tier ? `<span class="pill ${tierClass}">${escapeHtml(tier)}</span>` : '';
         }
 
         if (account.loading) {
@@ -1186,9 +1207,12 @@
 
                     const imgEl = document.createElement('img');
                     imgEl.className = 'announcement-image';
-                    imgEl.src = img.url;
+                    const safeImgUrl = sanitizeUrl(img.url);
+                    if (safeImgUrl) {
+                        imgEl.src = safeImgUrl;
+                        imgEl.dataset.previewUrl = safeImgUrl;
+                    }
                     imgEl.alt = img.alt || img.label || '';
-                    imgEl.dataset.previewUrl = img.url;
                     imgEl.title = getI18n('announcement.clickToEnlarge', 'Click to enlarge');
 
                     const skeleton = document.createElement('div');
@@ -1351,13 +1375,15 @@
     }
 
     function showImagePreview(imageUrl) {
+        const safeUrl = sanitizeUrl(imageUrl);
+        if (!safeUrl) return;
         const overlay = document.createElement('div');
         overlay.className = 'image-preview-overlay';
         const previewContainer = document.createElement('div');
         previewContainer.className = 'image-preview-container';
         const img = document.createElement('img');
         img.className = 'image-preview-img';
-        img.src = imageUrl;
+        img.src = safeUrl;
         const hint = document.createElement('div');
         hint.className = 'image-preview-hint';
         hint.textContent = getI18n('announcement.clickToClose', 'Click to close');
