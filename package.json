@@ -3,7 +3,7 @@
   "displayName": "Antigravity Cockpit",
   "icon": "assets/icon.png",
   "description": "A premium, dashboard-style quota monitor for Antigravity AI.",
-  "version": "2.1.9",
+  "version": "2.1.10",
   "publisher": "jlcodes",
   "engines": {
     "vscode": "^1.90.0"
@@ -104,6 +104,12 @@
         "title": "Load Account Quota",
         "category": "Antigravity",
         "icon": "$(cloud-download)"
+      },
+      {
+        "command": "agCockpit.debugLocalAccount",
+        "title": "Debug Local Account (state.vscdb)",
+        "category": "Antigravity",
+        "icon": "$(bug)"
       }
     ],
     "keybindings": [

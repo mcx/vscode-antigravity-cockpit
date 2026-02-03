@@ -4,9 +4,11 @@
  */
 
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { ProcessHunter } from './engine/hunter';
 import { ReactorCore } from './engine/reactor';
 import { logger } from './shared/log_service';
+import { setAntigravityUserDataDir } from './shared/antigravity_paths';
 import { configService, CockpitConfig } from './shared/config_service';
 import { t, i18n, normalizeLocaleInput } from './shared/i18n';
 import { CockpitHUD } from './view/hud';
@@ -21,6 +23,7 @@ import { MessageController } from './controller/message_controller';
 import { TelemetryController } from './controller/telemetry_controller';
 import { autoTriggerController } from './auto_trigger/controller';
 import { credentialStorage } from './auto_trigger';
+import { debugLocalCredentialImport } from './auto_trigger/local_auth_importer';
 import { announcementService } from './announcement';
 
 // Account Tree View
@@ -58,6 +61,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // 初始化日志
     logger.init();
     await configService.initialize(context);
+
+    // 记录当前实例的 user-data-dir（用于读取正确的 state.vscdb）
+    try {
+        const userDataDir = path.resolve(context.globalStorageUri.fsPath, '..', '..', '..');
+        setAntigravityUserDataDir(userDataDir);
+        logger.info(`[Startup] Resolved user-data-dir: ${userDataDir}`);
+    } catch (err) {
+        logger.warn(`[Startup] Failed to resolve user-data-dir: ${err instanceof Error ? err.message : String(err)}`);
+    }
 
     // 应用保存的语言设置
     const savedLanguage = configService.getConfig().language;
@@ -165,6 +177,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     context.subscriptions.push(accountTreeView);
     context.subscriptions.push({ dispose: () => accountsRefreshService.dispose() });
     registerAccountTreeCommands(context, accountTreeProvider);
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('agCockpit.debugLocalAccount', async () => {
+            try {
+                const result = await debugLocalCredentialImport();
+                vscode.window.showInformationMessage(
+                    `Local account: ${result.email ?? 'null'} | DB: ${result.dbPath}`,
+                );
+            } catch (error) {
+                const err = error instanceof Error ? error : new Error(String(error));
+                vscode.window.showErrorMessage(`Local account debug failed: ${err.message}`);
+            }
+        }),
+    );
 
     // 连接 Cockpit Tools WebSocket
     cockpitToolsWs.connect();

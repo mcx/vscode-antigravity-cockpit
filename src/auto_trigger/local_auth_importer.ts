@@ -1,4 +1,3 @@
-import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 // 使用 sql.js 的 wasm 版本（需要 .wasm 文件）
@@ -7,6 +6,7 @@ import { credentialStorage } from './credential_storage';
 import { oauthService } from './oauth_service';
 import { OAuthCredential } from './types';
 import { logger } from '../shared/log_service';
+import { getAntigravityStateDbPath, getAntigravityUserDataDir } from '../shared/antigravity_paths';
 
 const STATE_KEY = 'jetskiStateSync.agentManagerInitState';
 
@@ -37,25 +37,7 @@ interface PendingLocalCredential {
 const PENDING_CREDENTIAL_TTL_MS = 2 * 60 * 1000;
 let pendingLocalCredential: PendingLocalCredential | null = null;
 
-function getAntigravityStateDbPath(): string {
-    const homeDir = os.homedir();
-    if (process.platform === 'darwin') {
-        return path.join(
-            homeDir,
-            'Library',
-            'Application Support',
-            'Antigravity',
-            'User',
-            'globalStorage',
-            'state.vscdb',
-        );
-    }
-    if (process.platform === 'win32') {
-        const appData = process.env.APPDATA || path.join(homeDir, 'AppData', 'Roaming');
-        return path.join(appData, 'Antigravity', 'User', 'globalStorage', 'state.vscdb');
-    }
-    return path.join(homeDir, '.config', 'Antigravity', 'User', 'globalStorage', 'state.vscdb');
-}
+// 注意：state.vscdb 路径统一由 shared/antigravity_paths 提供，避免多处维护。
 
 async function readStateValue(dbPath: string): Promise<string> {
     // 检查数据库文件是否存在
@@ -198,6 +180,7 @@ function parseOAuthTokenInfo(data: Buffer): LocalTokenInfo {
 
 async function readLocalTokenInfo(): Promise<LocalTokenInfo> {
     const dbPath = getAntigravityStateDbPath();
+    logger.info(`[LocalAuth] state.vscdb path: ${dbPath}`);
     const stateValue = await readStateValue(dbPath);
     const raw = Buffer.from(stateValue.trim(), 'base64');
     const oauthField = findField(raw, 6);
@@ -205,6 +188,26 @@ async function readLocalTokenInfo(): Promise<LocalTokenInfo> {
         throw new Error('OAuth field not found');
     }
     return parseOAuthTokenInfo(oauthField);
+}
+
+async function loadCredentialFromStateDb(): Promise<OAuthCredential | null> {
+    const tokenInfo = await readLocalTokenInfo();
+    if (!tokenInfo.refreshToken) {
+        logger.debug('[LocalAuth] No refresh token found in state.vscdb');
+        return null;
+    }
+
+    const credential = await oauthService.buildCredentialFromRefreshToken(
+        tokenInfo.refreshToken,
+        undefined,
+    );
+
+    if (!credential.email || !credential.accessToken) {
+        logger.debug('[LocalAuth] Failed to build credential: missing email or accessToken');
+        return null;
+    }
+
+    return credential;
 }
 
 export async function previewLocalCredential(
@@ -226,6 +229,7 @@ export async function previewLocalCredential(
         throw new Error('无法确定账号邮箱');
     }
 
+    logger.info(`[LocalAuthImport] resolved account: ${credential.email}`);
     pendingLocalCredential = {
         credential,
         createdAt: Date.now(),
@@ -284,37 +288,34 @@ export async function importLocalCredential(fallbackEmail?: string): Promise<{ e
  * - 如果没有，尝试从 state.vscdb 读取并保存到 credentialStorage
  * @returns 账户邮箱或 null
  */
-export async function ensureLocalCredentialImported(): Promise<{ email: string } | null> {
-    // 首先检查是否已有有效凭证
-    const hasValid = await credentialStorage.hasValidCredential();
-    if (hasValid) {
-        const activeEmail = await credentialStorage.getActiveAccount();
-        if (activeEmail) {
-            logger.debug(`[LocalAuth] Using existing credential: ${activeEmail}`);
-            return { email: activeEmail };
+export async function ensureLocalCredentialImported(
+    options: { forceReload?: boolean } = {},
+): Promise<{ email: string } | null> {
+    if (options.forceReload) {
+        logger.info('[LocalAuthDebug] Force reload: skip cached credential');
+    }
+
+    const instanceDir = getAntigravityUserDataDir();
+    if (!options.forceReload && !instanceDir) {
+        const hasValid = await credentialStorage.hasValidCredential();
+        if (hasValid) {
+            const activeEmail = await credentialStorage.getActiveAccount();
+            if (activeEmail) {
+                logger.debug(`[LocalAuth] Using existing credential: ${activeEmail}`);
+                return { email: activeEmail };
+            }
         }
     }
 
-    // 没有有效凭证，尝试从 state.vscdb 导入
     try {
-        const tokenInfo = await readLocalTokenInfo();
-        if (!tokenInfo.refreshToken) {
-            logger.debug('[LocalAuth] No refresh token found in state.vscdb');
-            return null;
-        }
-
-        const credential = await oauthService.buildCredentialFromRefreshToken(
-            tokenInfo.refreshToken,
-            undefined,
-        );
-
-        if (!credential.email || !credential.accessToken) {
-            logger.debug('[LocalAuth] Failed to build credential: missing email or accessToken');
+        const credential = await loadCredentialFromStateDb();
+        if (!credential) {
             return null;
         }
 
         // 保存到 credentialStorage（自动导入）
         await credentialStorage.saveCredential(credential);
+        logger.info(`[LocalAuth] resolved account: ${credential.email}`);
         logger.info(`[LocalAuth] Auto-imported credential for ${credential.email}`);
         return { email: credential.email };
     } catch (error) {
@@ -322,4 +323,14 @@ export async function ensureLocalCredentialImported(): Promise<{ email: string }
         logger.debug(`[LocalAuth] Failed to import local credential: ${err.message}`);
         return null;
     }
+}
+
+export async function debugLocalCredentialImport(): Promise<{ email?: string; dbPath: string }> {
+    logger.info('[LocalAuthDebug] Starting local credential debug...');
+    const dbPath = getAntigravityStateDbPath();
+    logger.info(`[LocalAuthDebug] Using state.vscdb: ${dbPath}`);
+    logger.info(`[LocalAuthDebug] override user-data-dir: ${getAntigravityUserDataDir() ?? 'null'}`);
+    const result = await ensureLocalCredentialImported({ forceReload: true });
+    logger.info(`[LocalAuthDebug] Result: ${result?.email ?? 'null'}`);
+    return { email: result?.email, dbPath };
 }

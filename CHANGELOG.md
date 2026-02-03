@@ -8,6 +8,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.10] - 2026-02-03
+
+### Core Enhancements
+- **Multi-Instance Support**: The extension can now intelligently detect the runtime IDE instance and correctly read the `state.vscdb` from the current directory, resolving local account confusion in multi-user/multi-workspace environments.
+
+### Added
+- **Debug Tool**: Added `agCockpit.debugLocalAccount` command to quickly view the current local account info and database path.
+
+### Improved
+- **Path Management**: Refactored filesystem path resolution logic to support dynamically injected user data directories, improving stability in complex environments.
+
 ## [2.1.9]
 
 ### Added
