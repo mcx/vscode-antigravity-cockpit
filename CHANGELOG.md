@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.15] - 2026-02-06
+
+### Fixed
+- **Group Rename UI Sync (Local Mode)**: Fixed an issue where renaming quota groups could succeed in backend config but not update immediately in Dashboard under local mode. Group names now refresh instantly without requiring manual reload.
+- **Local Remote-API Reprocess Path**: Improved cache reprocess logic for local mode when using remote authorized quota data, ensuring latest `groupingCustomNames` are applied during re-render.
+- **Optimistic Rename Robustness**: Improved optimistic group-name DOM update to avoid selector edge cases with special `groupId` values.
+
+---
+
 ## [2.1.14] - 2026-02-06
 
 ### Improved

@@ -881,6 +881,16 @@ export class ReactorCore {
             return;
         }
 
+        if (quotaSource === 'local' && this.localUsingRemoteApi && this.lastAuthorizedModels && this.updateHandler) {
+            logger.info('Reprocessing cached local(remote API) telemetry data with latest config');
+            const telemetry = this.buildSnapshot(this.lastAuthorizedModels);
+            if (this.localAccountEmail) {
+                telemetry.localAccountEmail = this.localAccountEmail;
+            }
+            this.publishTelemetry(telemetry, 'local');
+            return;
+        }
+
         if (quotaSource === 'authorized' && this.lastAuthorizedModels && this.updateHandler) {
             logger.info('Reprocessing cached authorized telemetry data with latest config');
             const telemetry = this.buildSnapshot(this.lastAuthorizedModels);
@@ -927,6 +937,15 @@ export class ReactorCore {
 
         if (source === 'local' && this.lastRawResponse) {
             const telemetry = this.decodeSignal(this.lastRawResponse);
+            this.publishTelemetry(telemetry, 'local');
+            return true;
+        }
+
+        if (source === 'local' && this.localUsingRemoteApi && this.lastAuthorizedModels) {
+            const telemetry = this.buildSnapshot(this.lastAuthorizedModels);
+            if (this.localAccountEmail) {
+                telemetry.localAccountEmail = this.localAccountEmail;
+            }
             this.publishTelemetry(telemetry, 'local');
             return true;
         }

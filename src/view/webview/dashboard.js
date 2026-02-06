@@ -597,8 +597,9 @@ import { createAnnouncementModule } from './dashboard_announcements';
      * @param {string} newName 新名称
      */
     function updateGroupNameOptimistically(groupId, newName) {
-        // 1. 更新 DOM
-        const card = document.querySelector(`.group-card[data-group-id="${groupId}"]`);
+        // 1. 更新 DOM（避免 groupId 特殊字符导致 querySelector 失效）
+        const card = Array.from(document.querySelectorAll('.group-card'))
+            .find(el => el.getAttribute('data-group-id') === groupId);
         if (card) {
             const nameSpan = card.querySelector('.group-name');
             if (nameSpan) {
