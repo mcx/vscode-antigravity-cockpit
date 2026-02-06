@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.13] - 2026-02-06
+
+### Changed
+- **Extension Host Compatibility**: Updated `extensionKind` to `["ui", "workspace"]` so users can install the extension either locally or in remote environments (WSL / Remote-SSH) based on their workflow.
+
+### Notes
+- To keep reading local machine data in remote sessions, users can still force local UI host execution via VS Code `remote.extensionKind` settings.
+
+---
+
 ## [2.1.12] - 2026-02-05
 
 ### Added
