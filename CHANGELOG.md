@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.19] - 2026-02-10
+
+### Changed
+- **Authorized model list policy**: Authorized responses now only display models listed in `agentModelSorts > Recommended > groups[].modelIds`, and always append `gemini-3-pro-image`.
+- **Friendly model names**: Authorized model labels now use each model's `displayName` consistently across all views.
+
+---
+
 ## [2.1.18] - 2026-02-09
 
 ### Changed

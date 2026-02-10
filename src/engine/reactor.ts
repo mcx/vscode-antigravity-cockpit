@@ -71,14 +71,28 @@ interface AuthorizedModelInfo {
     isInternal?: boolean;
 }
 
+interface AuthorizedModelSortGroup {
+    modelIds?: string[];
+}
+
+interface AuthorizedModelSort {
+    displayName?: string;
+    groups?: AuthorizedModelSortGroup[];
+}
+
 interface AuthorizedQuotaResponse {
     models?: Record<string, AuthorizedModelInfo>;
+    agentModelSorts?: AuthorizedModelSort[];
 }
 
 export interface AccountQuotaFetchResult {
     snapshot: QuotaSnapshot;
     fromApiCacheFile: boolean;
 }
+
+const AUTHORIZED_PRIMARY_SORT_NAME = 'recommended';
+const AUTHORIZED_FIXED_MODEL_KEY = 'gemini-3-pro-image';
+const AUTHORIZED_FIXED_MODEL_ID = 'MODEL_PLACEHOLDER_M9';
 
 
 /**
@@ -825,9 +839,20 @@ export class ReactorCore {
             return models;
         }
 
-        for (const [modelKey, info] of Object.entries(data.models)) {
+        const orderedKeys = this.resolveAuthorizedOrderedModelKeys(data);
+        for (const modelKey of orderedKeys) {
+            const info = data.models[modelKey];
+            if (!info) {
+                continue;
+            }
             const quotaInfo = info.quotaInfo;
             if (!quotaInfo) {
+                continue;
+            }
+
+            const displayName = info.displayName?.trim();
+            if (!displayName) {
+                logger.debug(`[AuthorizedQuota] Skip model without displayName: ${modelKey}`);
                 continue;
             }
 
@@ -851,7 +876,7 @@ export class ReactorCore {
             
             const timeUntilReset = Math.max(0, resetTime.getTime() - now);
             const modelId = info.model || modelKey;
-            const label = info.displayName || modelKey;
+            const label = displayName;
 
             models.push({
                 label,
@@ -871,9 +896,72 @@ export class ReactorCore {
             });
         }
 
-        models.sort((a, b) => a.label.localeCompare(b.label));
         this.logModelList('authorized', models);
         return models;
+    }
+
+    private resolveAuthorizedOrderedModelKeys(data: AuthorizedQuotaResponse): string[] {
+        if (!data.models) {
+            return [];
+        }
+
+        const orderedKeys: string[] = [];
+        const added = new Set<string>();
+        const pushIdentifier = (identifier?: string): void => {
+            if (!identifier) {
+                return;
+            }
+            const key = this.resolveAuthorizedModelKeyByIdentifier(data.models!, identifier);
+            if (!key || added.has(key)) {
+                return;
+            }
+            added.add(key);
+            orderedKeys.push(key);
+        };
+
+        const recommendedSort = (data.agentModelSorts ?? []).find(sort =>
+            (sort.displayName ?? '').trim().toLowerCase() === AUTHORIZED_PRIMARY_SORT_NAME,
+        );
+
+        for (const group of recommendedSort?.groups ?? []) {
+            for (const modelIdentifier of group.modelIds ?? []) {
+                pushIdentifier(modelIdentifier);
+            }
+        }
+
+        // 始终追加图像模型（若存在）
+        pushIdentifier(AUTHORIZED_FIXED_MODEL_KEY);
+        pushIdentifier(AUTHORIZED_FIXED_MODEL_ID);
+
+        if (orderedKeys.length === 0) {
+            logger.warn('[AuthorizedQuota] No model found from Recommended sort + fixed image model');
+        }
+
+        return orderedKeys;
+    }
+
+    private resolveAuthorizedModelKeyByIdentifier(
+        modelMap: Record<string, AuthorizedModelInfo>,
+        identifier: string,
+    ): string | null {
+        const normalized = identifier.trim().toLowerCase();
+        if (!normalized) {
+            return null;
+        }
+
+        for (const modelKey of Object.keys(modelMap)) {
+            if (modelKey.trim().toLowerCase() === normalized) {
+                return modelKey;
+            }
+        }
+
+        for (const [modelKey, info] of Object.entries(modelMap)) {
+            if ((info.model ?? '').trim().toLowerCase() === normalized) {
+                return modelKey;
+            }
+        }
+
+        return null;
     }
     /**
      * 检查配额重置并触发自动唤醒
