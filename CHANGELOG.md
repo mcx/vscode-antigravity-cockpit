@@ -8,6 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.20] - 2026-02-11
+
+### Added
+- **Tools Connection Status**: Added a `🔗 Tools: Online/Offline` status indicator in the sidebar account tree and the Accounts Overview (both card and list views), showing the real-time Cockpit Tools WebSocket connection state.
+- **Local Account Data Reader**: New `cockpitToolsLocal` service that reads account data directly from `~/.antigravity_cockpit/accounts.json`, eliminating WebSocket dependency for account ID lookups.
+
+### Improved
+- **Account Switch Reconnection**: All three account switch entry points (sidebar, dashboard, accounts overview) now wait up to 5 seconds for WebSocket reconnection before giving up. Previously, switches would fail immediately if the connection was temporarily lost.
+- **Account Switch Flow**: Account ID is now resolved from local files before checking WebSocket connectivity. Only the final switch command requires an active WebSocket connection, preventing the "Cannot get account ID" error that occurred when the connection was temporarily lost.
+
+---
+
 ## [2.1.19] - 2026-02-10
 
 ### Changed

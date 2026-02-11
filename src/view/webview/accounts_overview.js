@@ -31,6 +31,7 @@
     let refreshCooldownTimer = null;
     const REFRESH_COOLDOWN_SECONDS = 10;
     let refreshAllLabel = '';
+    let toolsConnected = false;
     const RENDER_BATCH_SIZE = 1;
 
     const elements = {
@@ -484,6 +485,8 @@
             ? `${getString('bound', 'Bound')}`
             : `${getString('unbound', 'Unbound')}`;
         const fingerprintClass = account.hasDeviceBound ? 'bound' : 'unbound';
+        const toolsStatus = toolsConnected ? 'Online' : 'Offline';
+        const toolsClass = toolsConnected ? 'bound' : 'unbound';
 
         return `
             <div class="account-card ${isCurrent ? 'current' : ''} ${isSelected ? 'selected' : ''}" data-email="${escapeHtml(account.email)}">
@@ -503,6 +506,7 @@
                 <div class="card-footer">
                     <div class="card-meta">
                         <span class="card-date">${escapeHtml(formatDate(account.lastUpdated))}</span>
+                        <span class="fingerprint-pill ${toolsClass}">🔗 Tools: ${toolsStatus}</span>
                         <span class="fingerprint-pill ${fingerprintClass}">${escapeHtml(getString('fingerprint', 'Fingerprint'))}: ${fingerprintStatus}</span>
                     </div>
                     <div class="card-actions">
@@ -551,6 +555,7 @@
                     </div>
                 </td>
                 <td>
+                    <span class="fingerprint-status ${toolsConnected ? 'bound' : 'unbound'}">🔗 Tools: ${toolsConnected ? 'Online' : 'Offline'}</span>
                     <span class="fingerprint-status ${fingerprintClass}">${escapeHtml(getString('fingerprint', 'Fingerprint'))}: ${fingerprintStatus}</span>
                 </td>
                 <td>
@@ -1615,6 +1620,9 @@
         switch (message.type) {
         case 'accountsUpdate':
             accounts = message.data.accounts || [];
+            if (typeof message.data.toolsConnected === 'boolean') {
+                toolsConnected = message.data.toolsConnected;
+            }
             if (message.data.i18n) {
                 Object.assign(strings, message.data.i18n);
             }

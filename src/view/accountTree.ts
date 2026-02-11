@@ -15,6 +15,7 @@
 import * as vscode from 'vscode';
 import { logger } from '../shared/log_service';
 import { cockpitToolsWs } from '../services/cockpitToolsWs';
+import { cockpitToolsLocal } from '../services/cockpitToolsLocal';
 import { AccountsRefreshService } from '../services/accountsRefreshService';
 import { ModelQuotaInfo, QuotaGroup } from '../shared/types';
 import { t } from '../shared/i18n';
@@ -29,7 +30,7 @@ import { t } from '../shared/i18n';
 // Tree Node Types
 // ============================================================================
 
-export type AccountTreeItem = AccountNode | GroupNode | ModelNode | DeviceNode | LoadingNode | ErrorNode;
+export type AccountTreeItem = AccountNode | GroupNode | ModelNode | ToolsStatusNode | DeviceNode | LoadingNode | ErrorNode;
 
 /**
  * 账号节点 (第1层)
@@ -126,6 +127,30 @@ export class ModelNode extends vscode.TreeItem {
         this.iconPath = new vscode.ThemeIcon('symbol-method');
         this.tooltip = `${model.label}\n${t('accountTree.tooltipModelId')}: ${model.modelId}`;
         this.contextValue = 'model';
+    }
+}
+
+/**
+ * Tools 连接状态节点
+ */
+export class ToolsStatusNode extends vscode.TreeItem {
+    constructor(
+        public readonly accountEmail: string,
+        public readonly online: boolean,
+    ) {
+        super(
+            online ? 'Tools: Online' : 'Tools: Offline',
+            vscode.TreeItemCollapsibleState.None,
+        );
+
+        this.iconPath = new vscode.ThemeIcon(
+            online ? 'link' : 'debug-disconnect',
+            online ? new vscode.ThemeColor('charts.green') : new vscode.ThemeColor('errorForeground'),
+        );
+        this.tooltip = online
+            ? 'Cockpit Tools WebSocket: Connected'
+            : 'Cockpit Tools WebSocket: Disconnected';
+        this.contextValue = online ? 'toolsOnline' : 'toolsOffline';
     }
 }
 
@@ -284,6 +309,7 @@ export class AccountTreeProvider implements vscode.TreeDataProvider<AccountTreeI
         if (account && !account.hasPluginCredential) {
             return [
                 new ErrorNode(t('accountTree.notImported')),
+                new ToolsStatusNode(email, cockpitToolsWs.isConnected),
                 new DeviceNode(email, hasDevice),
             ];
         }
@@ -297,6 +323,7 @@ export class AccountTreeProvider implements vscode.TreeDataProvider<AccountTreeI
         if (cache.error) {
             return [
                 new ErrorNode(cache.error),
+                new ToolsStatusNode(email, cockpitToolsWs.isConnected),
                 new DeviceNode(email, hasDevice),
             ];
         }
@@ -319,6 +346,8 @@ export class AccountTreeProvider implements vscode.TreeDataProvider<AccountTreeI
             children.push(new ErrorNode(t('accountTree.noQuotaData')));
         }
 
+        // Tools 连接状态节点
+        children.push(new ToolsStatusNode(email, cockpitToolsWs.isConnected));
         // 设备指纹节点
         children.push(new DeviceNode(email, hasDevice));
 
@@ -384,38 +413,37 @@ export function registerAccountTreeCommands(
                 return;  // 中止操作
             }
             
-            // 导入 WebSocket 客户端 (文件顶部已导入，这里不需要重新导入，但为了保持逻辑一致，使用顶部导入的实例)
-            // const { cockpitToolsWs } = await import('../services/cockpitToolsWs');
-            
-            // 尝试确保连接
-            cockpitToolsWs.ensureConnected();
-            
-            // 检查连接状态
-            if (!cockpitToolsWs.isConnected) {
-                const launchAction = t('accountTree.launchCockpitTools');
-                const downloadAction = t('accountTree.downloadCockpitTools');
-                const action = await vscode.window.showWarningMessage(
-                    t('accountTree.cockpitToolsNotRunning'),
-                    launchAction,
-                    downloadAction,
-                );
-                
-                if (action === launchAction) {
-                    vscode.commands.executeCommand('agCockpit.accountTree.openManager');
-                } else if (action === downloadAction) {
-                    vscode.env.openExternal(vscode.Uri.parse('https://github.com/jlcodes99/antigravity-cockpit-tools/releases'));
-                }
-                return;
-            }
-
-            // 获取账号 ID
-            const accountId = await provider.getAccountId(node.email);
+            // 1. 先从本地文件获取账号 ID（不依赖 WebSocket）
+            const accountId = cockpitToolsLocal.getAccountIdByEmail(node.email);
             if (!accountId) {
                 vscode.window.showWarningMessage(t('accountTree.cannotGetAccountId'));
                 return;
             }
 
-            // 通过 WebSocket 请求切换
+            // 2. 再检查 WS 连接，未连接则等待重连
+            if (!cockpitToolsWs.isConnected) {
+                logger.info('[AccountTree] WS 未连接，尝试等待重连后执行切换...');
+                const connected = await cockpitToolsWs.waitForConnection(5000);
+                if (!connected) {
+                    const launchAction = t('accountTree.launchCockpitTools');
+                    const downloadAction = t('accountTree.downloadCockpitTools');
+                    const action = await vscode.window.showWarningMessage(
+                        t('accountTree.cockpitToolsNotRunning'),
+                        launchAction,
+                        downloadAction,
+                    );
+                    
+                    if (action === launchAction) {
+                        vscode.commands.executeCommand('agCockpit.accountTree.openManager');
+                    } else if (action === downloadAction) {
+                        vscode.env.openExternal(vscode.Uri.parse('https://github.com/jlcodes99/antigravity-cockpit-tools/releases'));
+                    }
+                    return;
+                }
+                logger.info('[AccountTree] WS 重连成功，继续执行切换操作');
+            }
+
+            // 3. 通过 WebSocket 请求切换
             const sent = cockpitToolsWs.requestSwitchAccount(accountId);
             if (sent) {
                 vscode.window.showInformationMessage(

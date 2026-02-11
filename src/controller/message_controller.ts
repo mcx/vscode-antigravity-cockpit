@@ -12,7 +12,8 @@ import { credentialStorage } from '../auto_trigger';
 import { previewLocalCredential, commitLocalCredential } from '../auto_trigger/local_auth_importer';
 import { announcementService } from '../announcement';
 import { antigravityToolsSyncService } from '../antigravityTools_sync';
-import { cockpitToolsWs, AccountInfo } from '../services/cockpitToolsWs';
+import { cockpitToolsWs } from '../services/cockpitToolsWs';
+import { cockpitToolsLocal } from '../services/cockpitToolsLocal';
 import { getQuotaHistory, clearHistory, clearAllHistory } from '../services/quota_history';
 import { oauthService } from '../auto_trigger';
 import { AccountsRefreshService } from '../services/accountsRefreshService';
@@ -836,29 +837,33 @@ export class MessageController {
                     if (message.email) {
                         logger.info(`User switching login account to: ${message.email}`);
                         
-                        // 检查 WebSocket 连接状态
+                        // 检查 WebSocket 连接状态，如果未连接则尝试等待重连
                         if (!cockpitToolsWs.isConnected) {
-                            const action = await vscode.window.showWarningMessage(
-                                'Cockpit Tools 未运行，无法切换账号',
-                                '启动 Cockpit Tools',
-                                '下载 Cockpit Tools',
-                            );
-                            
-                            if (action === '启动 Cockpit Tools') {
-                                vscode.commands.executeCommand('agCockpit.accountTree.openManager');
-                            } else if (action === '下载 Cockpit Tools') {
-                                vscode.env.openExternal(vscode.Uri.parse('https://github.com/jlcodes99/antigravity-cockpit-tools/releases'));
+                            logger.info('[MsgCtrl] WS 未连接，尝试等待重连后执行切换...');
+                            const connected = await cockpitToolsWs.waitForConnection(5000);
+                            if (!connected) {
+                                const action = await vscode.window.showWarningMessage(
+                                    'Cockpit Tools 未运行，无法切换账号',
+                                    '启动 Cockpit Tools',
+                                    '下载 Cockpit Tools',
+                                );
+                                
+                                if (action === '启动 Cockpit Tools') {
+                                    vscode.commands.executeCommand('agCockpit.accountTree.openManager');
+                                } else if (action === '下载 Cockpit Tools') {
+                                    vscode.env.openExternal(vscode.Uri.parse('https://github.com/jlcodes99/antigravity-cockpit-tools/releases'));
+                                }
+                                return;
                             }
-                            return;
+                            logger.info('[MsgCtrl] WS 重连成功，继续执行切换操作');
                         }
                         
                         try {
-                            // 通过 WebSocket 通知 Cockpit Tools 切换账号
-                            const resp = await cockpitToolsWs.getAccounts();
-                            const account = resp.accounts.find((a: AccountInfo) => a.email === message.email);
+                            // 从本地文件获取账号 ID（不依赖 WebSocket）
+                            const accountId = cockpitToolsLocal.getAccountIdByEmail(message.email);
                             
-                            if (account && account.id) {
-                                const result = await cockpitToolsWs.switchAccount(account.id);
+                            if (accountId) {
+                                const result = await cockpitToolsWs.switchAccount(accountId);
                                 if (result.success) {
                                     vscode.window.showInformationMessage(t('autoTrigger.switchLoginSuccess') || `已切换登录账户至 ${message.email}`);
                                 } else {
@@ -907,25 +912,30 @@ export class MessageController {
                         const email = message.email;
                         logger.info(`[MsgCtrl] Switching account to: ${email}`);
                         if (!cockpitToolsWs.isConnected) {
-                            const launchAction = t('accountTree.launchCockpitTools');
-                            const downloadAction = t('accountTree.downloadCockpitTools');
-                            const action = await vscode.window.showWarningMessage(
-                                t('accountTree.cockpitToolsNotRunning'),
-                                launchAction,
-                                downloadAction,
-                            );
-                            if (action === launchAction) {
-                                vscode.commands.executeCommand('agCockpit.accountTree.openManager');
-                            } else if (action === downloadAction) {
-                                vscode.env.openExternal(vscode.Uri.parse('https://github.com/jlcodes99/antigravity-cockpit-tools/releases'));
+                            logger.info('[MsgCtrl] WS 未连接，尝试等待重连后执行切换...');
+                            const connected = await cockpitToolsWs.waitForConnection(5000);
+                            if (!connected) {
+                                const launchAction = t('accountTree.launchCockpitTools');
+                                const downloadAction = t('accountTree.downloadCockpitTools');
+                                const action = await vscode.window.showWarningMessage(
+                                    t('accountTree.cockpitToolsNotRunning'),
+                                    launchAction,
+                                    downloadAction,
+                                );
+                                if (action === launchAction) {
+                                    vscode.commands.executeCommand('agCockpit.accountTree.openManager');
+                                } else if (action === downloadAction) {
+                                    vscode.env.openExternal(vscode.Uri.parse('https://github.com/jlcodes99/antigravity-cockpit-tools/releases'));
+                                }
+                                return;
                             }
-                            return;
+                            logger.info('[MsgCtrl] WS 重连成功，继续执行切换操作');
                         }
                         try {
-                            const resp = await cockpitToolsWs.getAccounts();
-                            const account = resp.accounts.find((a: AccountInfo) => a.email.toLowerCase() === email.toLowerCase());
-                            if (account && account.id) {
-                                const result = await cockpitToolsWs.switchAccount(account.id);
+                            // 从本地文件获取账号 ID（不依赖 WebSocket）
+                            const accountId = cockpitToolsLocal.getAccountIdByEmail(email);
+                            if (accountId) {
+                                const result = await cockpitToolsWs.switchAccount(accountId);
                                 if (result.success) {
                                     // active account updated via WS event
                                     this.hud.sendMessage({
@@ -938,6 +948,11 @@ export class MessageController {
                                         data: { status: 'error', message: result.message },
                                     });
                                 }
+                            } else {
+                                this.hud.sendMessage({
+                                    type: 'actionResult',
+                                    data: { status: 'error', message: t('autoTrigger.accountNotFound') || '未找到该账户' },
+                                });
                             }
                         } catch (e) {
                             const err = e instanceof Error ? e : new Error(String(e));

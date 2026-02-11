@@ -326,6 +326,48 @@ class CockpitToolsWsClient extends EventEmitter {
         
         return false;
     }
+
+    /**
+     * 等待 WebSocket 连接成功
+     * 如果当前已连接，立即返回 true
+     * 如果未连接，尝试强制重连并等待连接成功（带超时）
+     * @param timeoutMs 超时时间（毫秒），默认 5000ms
+     * @returns 是否成功连接
+     */
+    waitForConnection(timeoutMs = 5000): Promise<boolean> {
+        if (this._isConnected) {
+            return Promise.resolve(true);
+        }
+
+        return new Promise<boolean>((resolve) => {
+            let resolved = false;
+            let timer: NodeJS.Timeout | null = null;
+
+            const onConnected = () => {
+                if (resolved) { return; }
+                resolved = true;
+                if (timer) { clearTimeout(timer); }
+                this.removeListener('connected', onConnected);
+                logger.info('[WS] 等待连接成功，继续执行操作');
+                resolve(true);
+            };
+
+            // 监听连接成功事件
+            this.on('connected', onConnected);
+
+            // 设置超时
+            timer = setTimeout(() => {
+                if (resolved) { return; }
+                resolved = true;
+                this.removeListener('connected', onConnected);
+                logger.warn(`[WS] 等待连接超时 (${timeoutMs}ms)`);
+                resolve(false);
+            }, timeoutMs);
+
+            // 触发重连
+            this.ensureConnected();
+        });
+    }
     
     /**
      * 添加/更新账号到 Cockpit Tools

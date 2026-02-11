@@ -12,6 +12,7 @@ import { configService } from '../shared/config_service';
 import { i18n, t, localeDisplayNames } from '../shared/i18n';
 import { credentialStorage } from '../auto_trigger';
 import { AccountsRefreshService } from '../services/accountsRefreshService';
+import { cockpitToolsWs } from '../services/cockpitToolsWs';
 
 /**
  * CockpitHUD 类
@@ -460,6 +461,7 @@ export class CockpitHUD {
             data: {
                 accounts: accountsList,
                 config: configService.getConfig(),
+                toolsConnected: cockpitToolsWs.isConnected,
             },
         });
     }
