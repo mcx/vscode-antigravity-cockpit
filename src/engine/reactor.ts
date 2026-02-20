@@ -230,7 +230,25 @@ export class ReactorCore {
 
             // 获取 projectId
             const credential = await credentialStorage.getCredentialForAccount(email);
-            const projectId = credential?.projectId;
+            let projectId = credential?.projectId;
+            if (!projectId) {
+                try {
+                    const info = await cloudCodeClient.resolveProjectId(tokenStatus.token, {
+                        logLabel: 'AuthorizedQuota',
+                        route: { isGcpTos: credential?.isGcpTos },
+                    });
+                    if (info.projectId) {
+                        projectId = info.projectId;
+                        await credentialStorage.updateProjectIdForAccount(email, projectId);
+                    }
+                } catch (error) {
+                    if (error instanceof CloudCodeAuthError) {
+                        throw error;
+                    }
+                    const err = error instanceof Error ? error : new Error(String(error));
+                    logger.warn(`[AuthorizedQuota] resolveProjectId failed for ${email}: ${err.message}`);
+                }
+            }
 
             // 获取配额模型（复用现有方法）
             const modelsResult = await this.fetchAuthorizedQuotaModelsWithSource(
@@ -238,6 +256,7 @@ export class ReactorCore {
                 projectId,
                 email,
                 options?.forceRefresh ?? false,
+                credential?.isGcpTos,
             );
             const models = modelsResult.models;
 
@@ -734,7 +753,10 @@ export class ReactorCore {
             projectId = credential.projectId;
         } else {
             try {
-                const info = await cloudCodeClient.resolveProjectId(accessToken, { logLabel: 'AuthorizedQuota' });
+                const info = await cloudCodeClient.resolveProjectId(accessToken, {
+                    logLabel: 'AuthorizedQuota',
+                    route: { isGcpTos: credential?.isGcpTos },
+                });
                 if (info.projectId) {
                     projectId = info.projectId;
                     if (credential) {
@@ -751,7 +773,13 @@ export class ReactorCore {
             }
         }
 
-        const models = await this.fetchAuthorizedQuotaModels(accessToken, projectId, activeAccount ?? undefined);
+        const models = await this.fetchAuthorizedQuotaModels(
+            accessToken,
+            projectId,
+            activeAccount ?? undefined,
+            false,
+            credential?.isGcpTos,
+        );
         const activeAccountAfter = await credentialStorage.getActiveAccount();
         if (this.normalizeAccount(activeAccount) !== this.normalizeAccount(activeAccountAfter)) {
             logger.info('[AuthorizedQuota] Active account changed during fetch, retrying with new account');
@@ -777,8 +805,15 @@ export class ReactorCore {
         projectId?: string,
         email?: string,
         forceRefresh: boolean = false,
+        isGcpTos?: boolean,
     ): Promise<ModelQuotaInfo[]> {
-        const result = await this.fetchAuthorizedQuotaModelsWithSource(accessToken, projectId, email, forceRefresh);
+        const result = await this.fetchAuthorizedQuotaModelsWithSource(
+            accessToken,
+            projectId,
+            email,
+            forceRefresh,
+            isGcpTos,
+        );
         return result.models;
     }
 
@@ -787,6 +822,7 @@ export class ReactorCore {
         projectId?: string,
         email?: string,
         forceRefresh: boolean = false,
+        isGcpTos?: boolean,
     ): Promise<{ models: ModelQuotaInfo[]; fromApiCacheFile: boolean }> {
         if (email && !forceRefresh) {
             const cached = await readQuotaApiCache('authorized', email);
@@ -806,7 +842,10 @@ export class ReactorCore {
         const data = await cloudCodeClient.fetchAvailableModels(
             accessToken,
             projectId,
-            { logLabel: 'AuthorizedQuota' },
+            {
+                logLabel: 'AuthorizedQuota',
+                route: { isGcpTos },
+            },
         ) as AuthorizedQuotaResponse;
 
         if (email) {
@@ -933,8 +972,32 @@ export class ReactorCore {
         pushIdentifier(AUTHORIZED_FIXED_MODEL_KEY);
         pushIdentifier(AUTHORIZED_FIXED_MODEL_ID);
 
+        // 官方接口的 Recommended 分组可能不会覆盖全部可展示模型。
+        // 这里补全：把其余“有配额 + 有名称”的模型按推荐优先级追加，避免漏显示。
+        const fallbackKeys = Object.entries(data.models)
+            .filter(([, info]) => !!info?.quotaInfo && !!info?.displayName?.trim())
+            .sort(([aKey, aInfo], [bKey, bInfo]) => {
+                const rankA = this.getAuthorizedRecommendedRankFromRaw(aKey, aInfo);
+                const rankB = this.getAuthorizedRecommendedRankFromRaw(bKey, bInfo);
+                if (rankA !== rankB) {
+                    return rankA - rankB;
+                }
+                const labelA = (aInfo.displayName ?? '').trim();
+                const labelB = (bInfo.displayName ?? '').trim();
+                return labelA.localeCompare(labelB);
+            })
+            .map(([key]) => key);
+
+        for (const key of fallbackKeys) {
+            if (added.has(key)) {
+                continue;
+            }
+            added.add(key);
+            orderedKeys.push(key);
+        }
+
         if (orderedKeys.length === 0) {
-            logger.warn('[AuthorizedQuota] No model found from Recommended sort + fixed image model');
+            logger.warn('[AuthorizedQuota] No model found from available models response');
         }
 
         return orderedKeys;
@@ -1293,9 +1356,6 @@ export class ReactorCore {
                             groupMap.set(groupId, []);
                         }
                         groupMap.get(groupId)!.push(model);
-                    } else {
-                        // 新模型，单独一组（使用自己的 modelId 作为 groupId）
-                        groupMap.set(model.modelId, [model]);
                     }
                 }
                 
@@ -1357,15 +1417,12 @@ export class ReactorCore {
                         logger.warn(`Failed to save updated groupMappings: ${err}`);
                     });
                     
-                    // 从 groupMap 中移除这些模型，并为它们创建独立分组
+                    // 从 groupMap 中移除这些模型（未分组模型在分组视图中隐藏）
                     for (const modelId of modelsToRemove) {
-                        // 从原分组中移除
                         for (const [_gid, gModels] of groupMap) {
                             const idx = gModels.findIndex(m => m.modelId === modelId);
                             if (idx !== -1) {
-                                const [removedModel] = gModels.splice(idx, 1);
-                                // 创建独立分组
-                                groupMap.set(modelId, [removedModel]);
+                                gModels.splice(idx, 1);
                                 break;
                             }
                         }
@@ -1378,13 +1435,11 @@ export class ReactorCore {
                         }
                     }
                     
-                    logger.info(`[GroupCheck] Removed ${modelsToRemove.length} models from groups due to quota mismatch`);
+                    logger.info(`[GroupCheck] Removed ${modelsToRemove.length} models from groups due to quota mismatch (hidden in grouped view)`);
                 }
             } else {
-                // 没有存储的映射，每个模型单独一组
-                for (const model of models) {
-                    groupMap.set(model.modelId, [model]);
-                }
+                // 没有存储映射时，不展示未分组模型
+                logger.debug('Grouping enabled but no saved mappings; ungrouped models are hidden');
             }
             
             // 转换为 QuotaGroup 数组
@@ -1499,6 +1554,27 @@ export class ReactorCore {
         }
         const normalizedId = normalizeRecommendedKey(model.modelId);
         const normalizedLabel = normalizeRecommendedKey(model.label);
+        return Math.min(
+            AUTH_RECOMMENDED_ID_KEY_RANK.get(normalizedId) ?? Number.MAX_SAFE_INTEGER,
+            AUTH_RECOMMENDED_LABEL_KEY_RANK.get(normalizedLabel) ?? Number.MAX_SAFE_INTEGER,
+        );
+    }
+
+    private getAuthorizedRecommendedRankFromRaw(modelKey: string, info: AuthorizedModelInfo): number {
+        const modelId = info.model || modelKey;
+        const label = info.displayName?.trim() || modelKey;
+
+        const idRank = AUTH_RECOMMENDED_ID_RANK.get(modelId);
+        if (idRank !== undefined) {
+            return idRank;
+        }
+        const labelRank = AUTH_RECOMMENDED_LABEL_RANK.get(label);
+        if (labelRank !== undefined) {
+            return labelRank;
+        }
+
+        const normalizedId = normalizeRecommendedKey(modelId);
+        const normalizedLabel = normalizeRecommendedKey(label);
         return Math.min(
             AUTH_RECOMMENDED_ID_KEY_RANK.get(normalizedId) ?? Number.MAX_SAFE_INTEGER,
             AUTH_RECOMMENDED_LABEL_KEY_RANK.get(normalizedLabel) ?? Number.MAX_SAFE_INTEGER,

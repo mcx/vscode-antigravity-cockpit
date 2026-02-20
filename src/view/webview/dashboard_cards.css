@@ -56,13 +56,14 @@
 /* 拖拽手柄 - 在标题行左侧 */
 .drag-handle {
     color: var(--text-secondary);
-    font-size: 12px;
+    font-size: 9px;
     opacity: 0.4;
     cursor: grab;
-    padding: 2px 4px;
+    padding: 0 2px;
     transition: opacity 0.2s, color 0.2s;
     flex-shrink: 0;
-    margin-right: 6px;
+    margin-right: 2px;
+    margin-left: -3px;
 }
 
 .drag-handle:hover {
@@ -77,16 +78,18 @@
 /* ============ 卡片标题 ============ */
 
 .card-title {
-    font-size: 16px;
+    font-size: 12px;
     font-weight: 600;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     color: var(--text-primary);
-    width: 100%;
+    width: calc(100% + 8px);
+    margin-left: -4px;
+    margin-right: -4px;
     text-align: left;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
 }
 
 .card-title .label {
@@ -98,9 +101,38 @@
 
 .card-title .actions {
     display: flex;
-    gap: 8px;
+    gap: 4px;
     align-items: center;
     flex-shrink: 0;
+    margin-right: -3px;
+}
+
+.card-title .actions .icon-btn {
+    font-size: 11px;
+    padding: 1px 3px;
+    border-radius: 3px;
+}
+
+.card-title .rename-model-btn,
+.card-title .rename-group-btn {
+    font-size: 10px;
+    padding: 1px 2px;
+}
+
+.card-title .switch {
+    width: 30px;
+    height: 17px;
+}
+
+.card-title .switch .slider:before {
+    height: 11px;
+    width: 11px;
+    left: 3px;
+    bottom: 3px;
+}
+
+.card-title .switch input:checked + .slider:before {
+    transform: translateX(13px);
 }
 
 .status-dot {
@@ -657,6 +689,14 @@
     cursor: default;
 }
 
+.model-name-has-caps {
+    cursor: help;
+}
+
+.model-name-has-caps:hover {
+    color: var(--accent);
+}
+
 .group-models {
     width: 100%;
     margin-top: 12px;
@@ -716,9 +756,41 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    animation: tagPulse 2s ease-in-out infinite;
+    animation: none;
     white-space: nowrap;
     vertical-align: middle;
+    display: inline-block;
+}
+
+.tag-new.tag-new-transient {
+    display: none;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.tag-new.tag-new-transient.tag-new-burst {
+    display: inline-block;
+    animation: newTagBurst 1.6s ease-in-out 3;
+}
+
+.tag-new.tag-new-transient.tag-new-hidden-after-burst {
+    display: none;
+    opacity: 0;
+    animation: none;
+}
+
+@keyframes newTagBurst {
+
+    0%,
+    100% {
+        opacity: 0.62;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
 }
 
 /* Start 标签 (History Table) */
@@ -755,6 +827,7 @@
 .title-wrapper {
     display: flex;
     align-items: center;
+    gap: 4px;
     flex: 1;
     min-width: 0;
     overflow: hidden;
@@ -775,40 +848,6 @@
     font-size: 8px;
     padding: 1px 4px;
     margin-left: 4px;
-}
-
-.group-model-tag .caps-dot {
-    font-size: 10px;
-    color: var(--accent);
-    margin-left: 4px;
-    animation: twinkle 1.5s infinite alternate;
-}
-
-@keyframes twinkle {
-    from {
-        opacity: 0.6;
-    }
-
-    to {
-        opacity: 1;
-        transform: scale(1.1);
-    }
-}
-
-/* 能力触发器（标题栏内） */
-.title-caps-trigger {
-    font-size: 12px;
-    margin-left: 6px;
-    cursor: default;
-    transition: transform 0.2s;
-    animation: twinkle 2s infinite alternate;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.title-caps-trigger:hover {
-    transform: scale(1.2);
 }
 
 /* 富文本工具提示 */
@@ -1366,5 +1405,3 @@
     background: rgba(162, 119, 255, 0.1);
     transform: translateY(-2px);
 }
-
-

@@ -75,6 +75,12 @@ export class CockpitHUD {
                 webviewPanel.onDidDispose(() => {
                     this.panel = undefined;
                 });
+
+                webviewPanel.onDidChangeViewState((e) => {
+                    if (e.webviewPanel.visible) {
+                        this.notifyPanelRevealed(e.webviewPanel);
+                    }
+                });
                 
                 webviewPanel.webview.onDidReceiveMessage((message: WebviewMessage) => {
                     if (this.messageRouter) {
@@ -85,6 +91,9 @@ export class CockpitHUD {
                 // 恢复后刷新数据
                 if (this.cachedTelemetry) {
                     await this.refreshWithCachedData();
+                }
+                if (webviewPanel.visible) {
+                    this.notifyPanelRevealed(webviewPanel, 250);
                 }
             },
         });
@@ -101,11 +110,15 @@ export class CockpitHUD {
 
         // 如果已经有 panel，直接显示
         if (this.panel) {
+            const wasVisible = this.panel.visible;
             if (localeChanged) {
                 this.panel.webview.html = this.generateHtml(this.panel.webview);
             }
             this.panel.reveal(column);
             await this.refreshWithCachedData();
+            if (!wasVisible && this.panel.visible) {
+                this.notifyPanelRevealed(this.panel, 120);
+            }
             // 如果指定了初始标签页，发送消息切换
             if (initialTab) {
                 setTimeout(() => {
@@ -137,6 +150,12 @@ export class CockpitHUD {
                 this.panel = undefined;
             });
 
+            panel.onDidChangeViewState((e) => {
+                if (e.webviewPanel.visible) {
+                    this.notifyPanelRevealed(e.webviewPanel);
+                }
+            });
+
             panel.webview.onDidReceiveMessage((message: WebviewMessage) => {
                 if (this.messageRouter) {
                     this.messageRouter(message);
@@ -147,6 +166,9 @@ export class CockpitHUD {
 
             if (this.cachedTelemetry) {
                 await this.refreshWithCachedData();
+            }
+            if (panel.visible) {
+                this.notifyPanelRevealed(panel, 250);
             }
 
             // 如果指定了初始标签页，延迟发送消息切换
@@ -162,6 +184,15 @@ export class CockpitHUD {
             logger.error(`Failed to create Webview panel: ${err.message}`);
             return false;
         }
+    }
+
+    private notifyPanelRevealed(panel: vscode.WebviewPanel, delayMs = 120): void {
+        setTimeout(() => {
+            if (this.panel !== panel || !panel.visible) {
+                return;
+            }
+            panel.webview.postMessage({ type: 'panelRevealed' });
+        }, delayMs);
     }
 
     /**
@@ -1485,13 +1516,6 @@ export class CockpitHUD {
                         <h4>📦 ${i18n.t('customGrouping.groupList')}</h4>
                         <div id="custom-groups-list" class="custom-groups-list">
                             <!-- Groups will be rendered here -->
-                        </div>
-                    </div>
-                    <div class="ungrouped-section">
-                        <h4>🎲 ${i18n.t('customGrouping.ungrouped')}</h4>
-                        <p class="ungrouped-hint">${i18n.t('customGrouping.ungroupedHint')}</p>
-                        <div id="ungrouped-models-list" class="ungrouped-models-list">
-                            <!-- Ungrouped models will be rendered here -->
                         </div>
                     </div>
                 </div>

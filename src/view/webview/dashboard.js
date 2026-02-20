@@ -109,6 +109,9 @@ import { createAnnouncementModule } from './dashboard_announcements';
 
     // 刷新冷却时间（秒）
     let refreshCooldown = 10;
+    const NEW_TAG_BURST_MS = 5000;
+    let shouldBurstNewTags = true;
+    let newTagBurstTimer = null;
 
     const normalizeRecommendedKey = value => (value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const AUTH_RECOMMENDED_LABEL_RANK = new Map(
@@ -278,6 +281,12 @@ import { createAnnouncementModule } from './dashboard_announcements';
 
         // 监听消息
         window.addEventListener('message', handleMessage);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                shouldBurstNewTags = true;
+                triggerNewTagBurstIfNeeded();
+            }
+        });
 
         // Tab 导航切换
         initTabNavigation();
@@ -710,6 +719,12 @@ import { createAnnouncementModule } from './dashboard_announcements';
         // 处理标签页切换消息
         if (message.type === 'switchTab' && message.tab) {
             switchToTab(message.tab);
+            return;
+        }
+
+        if (message.type === 'panelRevealed') {
+            shouldBurstNewTags = true;
+            triggerNewTagBurstIfNeeded();
             return;
         }
 
@@ -2463,6 +2478,41 @@ import { createAnnouncementModule } from './dashboard_announcements';
 
     // ============ 渲染 ============
 
+    function triggerNewTagBurstIfNeeded() {
+        if (!shouldBurstNewTags || document.visibilityState !== 'visible') {
+            return;
+        }
+
+        const tags = dashboard.querySelectorAll('.tag-new.tag-new-transient');
+        if (!tags.length) {
+            return;
+        }
+
+        shouldBurstNewTags = false;
+
+        if (newTagBurstTimer) {
+            window.clearTimeout(newTagBurstTimer);
+            newTagBurstTimer = null;
+        }
+
+        tags.forEach(tag => {
+            tag.classList.remove('tag-new-hidden-after-burst');
+            tag.classList.remove('tag-new-burst');
+            void tag.offsetWidth;
+            tag.classList.add('tag-new-burst');
+        });
+
+        newTagBurstTimer = window.setTimeout(() => {
+            tags.forEach(tag => {
+                if (tag.isConnected) {
+                    tag.classList.remove('tag-new-burst');
+                    tag.classList.add('tag-new-hidden-after-burst');
+                }
+            });
+            newTagBurstTimer = null;
+        }, NEW_TAG_BURST_MS);
+    }
+
     function render(snapshot, config) {
         statusDiv.style.display = 'none';
         dashboard.innerHTML = '';
@@ -2487,13 +2537,13 @@ import { createAnnouncementModule } from './dashboard_announcements';
         // 更新分组按钮状态
         updateToggleGroupingButton(config?.groupingEnabled);
 
-        // 如果启用了分组显示，渲染分组卡片
-        if (config?.groupingEnabled && snapshot.groups && snapshot.groups.length > 0) {
+        // 如果启用了分组显示，仅渲染已分组卡片（未分组模型不显示）
+        if (config?.groupingEnabled) {
             // 渲染自动分组按钮区域
             renderAutoGroupBar();
 
             // 分组排序：支持自定义顺序
-            let groups = [...snapshot.groups];
+            let groups = snapshot.groups ? [...snapshot.groups] : [];
             if (config?.groupOrder?.length > 0) {
                 const orderMap = new Map();
                 config.groupOrder.forEach((id, index) => orderMap.set(id, index));
@@ -2510,6 +2560,7 @@ import { createAnnouncementModule } from './dashboard_announcements';
             groups.forEach(group => {
                 renderGroupCard(group, config?.pinnedGroups || []);
             });
+            triggerNewTagBurstIfNeeded();
             return;
         }
 
@@ -2530,6 +2581,7 @@ import { createAnnouncementModule } from './dashboard_announcements';
         models.forEach(model => {
             renderModelCard(model, config?.pinnedModels || [], config?.modelCustomNames || {});
         });
+        triggerNewTagBurstIfNeeded();
     }
 
     function renderLocalOfflineCard(errorMessage) {
@@ -2751,13 +2803,7 @@ import { createAnnouncementModule } from './dashboard_announcements';
 
     function renderCustomGroupingContent() {
         const groupsList = document.getElementById('custom-groups-list');
-        const ungroupedList = document.getElementById('ungrouped-models-list');
-
-        if (!groupsList || !ungroupedList) return;
-
-        // 获取已分组的模型 ID
-        const groupedModelIds = new Set();
-        customGroupingState.groups.forEach(g => g.modelIds.forEach(id => groupedModelIds.add(id)));
+        if (!groupsList) return;
 
         // 渲染分组列表
         if (customGroupingState.groups.length === 0) {
@@ -2811,23 +2857,6 @@ import { createAnnouncementModule } from './dashboard_announcements';
             });
         }
 
-        // 渲染未分组模型
-        const ungroupedModels = customGroupingState.allModels.filter(m => !groupedModelIds.has(m.modelId));
-
-        if (ungroupedModels.length === 0) {
-            ungroupedList.innerHTML = `<div style="color: var(--text-secondary); font-size: 12px;">${i18n['customGrouping.noModels'] || 'All models are grouped'}</div>`;
-        } else {
-            ungroupedList.innerHTML = ungroupedModels.map(model => {
-                const name = currentConfig.modelCustomNames?.[model.modelId] || model.label;
-                const quotaPct = (model.remainingPercentage || 0).toFixed(0);
-                return `
-                    <div class="ungrouped-model-item" data-model-id="${escapeHtml(model.modelId)}" title="${escapeHtml(model.modelId)}">
-                        ${escapeHtml(name)}
-                        <span class="quota-badge">${quotaPct}%</span>
-                    </div>
-                `;
-            }).join('');
-        }
     }
 
     function handleAddGroup() {
@@ -3094,40 +3123,41 @@ import { createAnnouncementModule } from './dashboard_announcements';
             return;
         }
 
-        // 固定分组配置（使用精确模型 ID）
+        // 固定分组配置（仅使用精确模型 ID）
         const defaultGroups = [
-            {
-                id: 'claude_45',
-                name: 'Claude 4.5',
-                modelIds: [
-                    'MODEL_PLACEHOLDER_M12',           // Claude Opus 4.5 (Thinking)
-                    'MODEL_CLAUDE_4_5_SONNET',         // Claude Sonnet 4.5
-                    'MODEL_CLAUDE_4_5_SONNET_THINKING', // Claude Sonnet 4.5 (Thinking)
-                    'MODEL_OPENAI_GPT_OSS_120B_MEDIUM', // GPT-OSS 120B (Medium)
-                ]
-            },
             {
                 id: 'g3_pro',
                 name: 'G3-Pro',
                 modelIds: [
-                    'MODEL_PLACEHOLDER_M7',  // Gemini 3 Pro (High)
-                    'MODEL_PLACEHOLDER_M8',  // Gemini 3 Pro (Low)
-                ]
+                    'MODEL_PLACEHOLDER_M36', // Gemini 3.1 Pro (Low)
+                    'MODEL_PLACEHOLDER_M37', // Gemini 3.1 Pro (High)
+                    'MODEL_PLACEHOLDER_M7',  // Gemini 3 Pro (Low)
+                    'MODEL_PLACEHOLDER_M8',  // Gemini 3 Pro (High)
+                ],
             },
             {
                 id: 'g3_flash',
                 name: 'G3-Flash',
                 modelIds: [
                     'MODEL_PLACEHOLDER_M18', // Gemini 3 Flash
-                ]
+                ],
+            },
+            {
+                id: 'claude_4',
+                name: 'Claude 4',
+                modelIds: [
+                    'MODEL_OPENAI_GPT_OSS_120B_MEDIUM', // GPT-OSS 120B (Medium)
+                    'MODEL_PLACEHOLDER_M26',            // Claude Opus 4.6 (Thinking)
+                    'MODEL_PLACEHOLDER_M35',            // Claude Sonnet 4.6 (Thinking)
+                ],
             },
             {
                 id: 'g3_image',
-                name: 'G3-Image',
+                name: 'Gemini 3 Pro Image',
                 modelIds: [
-                    'MODEL_PLACEHOLDER_M9',  // Gemini 3 Pro Image
-                ]
-            }
+                    'MODEL_PLACEHOLDER_M9', // Gemini 3 Pro Image
+                ],
+            },
         ];
 
         // 保存现有分组名称映射（modelId -> groupName）
@@ -3140,16 +3170,13 @@ import { createAnnouncementModule } from './dashboard_announcements';
 
         // 按固定分组分配模型
         const groupMap = new Map(); // groupId -> { id, name, modelIds }
-        const matchedModels = new Set();
-
         for (const defaultGroup of defaultGroups) {
             const groupModels = [];
             
             for (const model of models) {
-                // 精确匹配模型 ID
+                // 固定常量匹配：只按 modelId
                 if (defaultGroup.modelIds.includes(model.modelId)) {
                     groupModels.push(model.modelId);
-                    matchedModels.add(model.modelId);
                 }
             }
 
@@ -3169,16 +3196,6 @@ import { createAnnouncementModule } from './dashboard_announcements';
                     modelIds: groupModels
                 });
             }
-        }
-
-        // 未匹配的模型放入 "Other" 分组
-        const ungroupedModels = models.filter(m => !matchedModels.has(m.modelId));
-        if (ungroupedModels.length > 0) {
-            groupMap.set('other', {
-                id: 'other',
-                name: i18n['customGrouping.other'] || '其他',
-                modelIds: ungroupedModels.map(m => m.modelId)
-            });
         }
 
         // 转换为数组
@@ -3464,12 +3481,15 @@ import { createAnnouncementModule } from './dashboard_announcements';
     }
 
     /**
-     * 生成能力 Tooltip HTML
+     * 生成能力 Tooltip HTML（始终包含完整模型名）
      */
-    function generateCapabilityTooltip(caps) {
-        return caps.map(cap =>
-            `<div class="rich-tooltip-item ${cap.className || ''}"><span class="icon">${cap.icon}</span><span class="text">${cap.text}</span></div>`
+    function generateCapabilityTooltip(modelName, caps) {
+        const modelNameLabel = i18n['dashboard.modelName'] || 'Model Name';
+        const modelNameRow = `<div class="rich-tooltip-item"><span class="icon">🏷️</span><span class="text">${escapeHtml(modelNameLabel)}: ${escapeHtml(modelName)}</span></div>`;
+        const capRows = caps.map(cap =>
+            `<div class="rich-tooltip-item ${cap.className || ''}"><span class="icon">${cap.icon}</span><span class="text">${escapeHtml(cap.text)}</span></div>`
         ).join('');
+        return modelNameRow + capRows;
     }
 
     function renderGroupCard(group, pinnedGroups) {
@@ -3494,19 +3514,16 @@ import { createAnnouncementModule } from './dashboard_announcements';
         // 生成组内模型列表（带能力图标）
         const modelList = group.models.map(m => {
             const caps = getModelCapabilityList(m);
-            const tagHtml = m.tagTitle ? `<span class="tag-new">${m.tagTitle}</span>` : '';
+            const tagHtml = m.tagTitle
+                ? `<span class="tag-new tag-new-transient tag-new-hidden-after-burst">${escapeHtml(m.tagTitle)}</span>`
+                : '';
             const recClass = m.isRecommended ? ' recommended' : '';
 
-            // 如果有能力，添加悬浮属性
-            let tooltipAttr = '';
-            let capsIndicator = '';
-            if (caps.length > 0) {
-                const tooltipHtml = encodeURIComponent(generateCapabilityTooltip(caps));
-                tooltipAttr = ` data-tooltip-html="${tooltipHtml}"`;
-                capsIndicator = `<span class="caps-dot">✨</span>`;
-            }
+            // 所有模型都提供悬浮能力提示（第一行显示完整模型名）
+            const tooltipHtml = encodeURIComponent(generateCapabilityTooltip(m.label, caps));
+            const tooltipAttr = ` data-tooltip-html="${tooltipHtml}"`;
 
-            return `<span class="group-model-tag${recClass}" title="${escapeHtml(m.modelId)}"${tooltipAttr}>${escapeHtml(m.label)}${tagHtml}${capsIndicator}</span>`;
+            return `<span class="group-model-tag${recClass}" title="${escapeHtml(m.modelId)}"${tooltipAttr}>${escapeHtml(m.label)}${tagHtml}</span>`;
         }).join('');
 
         card.innerHTML = `
@@ -3520,7 +3537,6 @@ import { createAnnouncementModule } from './dashboard_announcements';
                         <input type="checkbox" class="group-pin-toggle" data-group-id="${escapeHtml(group.groupId)}" ${isPinned ? 'checked' : ''}>
                         <span class="slider"></span>
                     </label>
-                    <span class="status-dot" style="background-color: ${color}"></span>
                 </div>
             </div>
             <div class="progress-circle" style="background: conic-gradient(${color} ${pct}%, var(--border-color) ${pct}%);">
@@ -3584,18 +3600,15 @@ import { createAnnouncementModule } from './dashboard_announcements';
 
         // 生成能力数据
         const caps = getModelCapabilityList(model);
-        let capsIconHtml = '';
-        let tooltipAttr = '';
-
-        // 如果有能力，生成标题栏图标，并设置 tooltip
-        if (caps.length > 0) {
-            const tooltipHtml = encodeURIComponent(generateCapabilityTooltip(caps));
-            tooltipAttr = ` data-tooltip-html="${tooltipHtml}"`;
-            capsIconHtml = `<span class="title-caps-trigger">✨</span>`;
-        }
+        // 所有模型名都支持悬浮提示：完整模型名 + 能力列表（若有）
+        const tooltipHtml = encodeURIComponent(generateCapabilityTooltip(displayName, caps));
+        const nameCapsTooltipAttr = ` data-tooltip-html="${tooltipHtml}"`;
+        const nameCapsClass = ' model-name-has-caps';
 
         // 生成 New 标签
-        const tagHtml = model.tagTitle ? `<span class="tag-new">${model.tagTitle}</span>` : '';
+        const tagHtml = model.tagTitle
+            ? `<span class="tag-new tag-new-transient tag-new-hidden-after-burst">${escapeHtml(model.tagTitle)}</span>`
+            : '';
 
         // 推荐模型高亮样式
         const recommendedClass = model.isRecommended ? ' card-recommended' : '';
@@ -3616,10 +3629,9 @@ import { createAnnouncementModule } from './dashboard_announcements';
         card.innerHTML = `
             <div class="card-title">
                 <span class="drag-handle" data-tooltip="${escapeHtml(i18n['dashboard.dragHint'] || 'Drag to reorder')}">⋮⋮</span>
-                <div class="title-wrapper"${tooltipAttr}>
-                    <span class="label model-name" title="${escapeHtml(model.modelId)} (${escapeHtml(originalLabel)})">${escapeHtml(displayName)}</span>
+                <div class="title-wrapper">
+                    <span class="label model-name${nameCapsClass}"${nameCapsTooltipAttr} title="${escapeHtml(model.modelId)} (${escapeHtml(originalLabel)})">${escapeHtml(displayName)}</span>
                     ${tagHtml}
-                    ${capsIconHtml}
                 </div>
                 <div class="actions">
                     <button class="rename-model-btn icon-btn" data-model-id="${escapeHtml(model.modelId)}" data-tooltip-html="${encodeURIComponent('<div class="rich-tooltip-item"><span class="text">' + escapeHtml(i18n['model.rename'] || 'Rename') + '</span></div>')}">✏️</button>
@@ -3627,7 +3639,6 @@ import { createAnnouncementModule } from './dashboard_announcements';
                         <input type="checkbox" class="pin-toggle" data-model-id="${escapeHtml(model.modelId)}" ${isPinned ? 'checked' : ''}>
                         <span class="slider"></span>
                     </label>
-                    <span class="status-dot" style="background-color: ${color}"></span>
                 </div>
             </div>
             <div class="progress-circle" style="background: conic-gradient(${color} ${pct}%, var(--border-color) ${pct}%);">
