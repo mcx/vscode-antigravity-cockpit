@@ -8,6 +8,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.24] - 2026-02-24
+
+### Added
+- **Deprecated model preference migration**: Saved model preferences now auto-migrate deprecated model IDs to their current replacements during config load and subsequent saves (including visible models, pinned/order entries, custom names, and grouping mappings).
+
+### Changed
+- **Smart group naming override**: Clicking `Auto Group` now always applies canonical group names (`Claude`, `Gemini Pro`, `Gemini Flash`, `Gemini Image`) instead of inheriting historical names.
+- **Smart group save cleanup**: Saving immediately after `Auto Group` now rewrites group-name mappings using the canonical names and removes stale group-name entries for models outside the current grouped set.
+- **Authorized recommended list refresh**: Updated the built-in recommended model list to the current Gemini 3.1 / Claude 4.6 lineup.
+
+### Fixed
+- **Custom grouping modal model source**: The grouping manager now uses the full model list (`allModels`) instead of the visibility-filtered list, so models hidden by "Manage Visible Models" still appear in the grouping editor.
+
+### Notes
+- Startup shows a one-time informational notice when deprecated model preferences are auto-migrated.
+
+---
+
 ## [2.1.23] - 2026-02-22
 
 ### Changed

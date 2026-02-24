@@ -133,7 +133,8 @@ import { createAnnouncementModule } from './dashboard_announcements';
     let customGroupingState = {
         groups: [],       // { id: string, name: string, modelIds: string[] }
         allModels: [],    // 所有模型数据（从 snapshot 获取）
-        groupMappings: {} // 原始分组映射（用于保存）
+        groupMappings: {}, // 原始分组映射（用于保存）
+        smartGroupCanonicalNames: null, // 自动分组后用于强制覆盖组名并清理残留名称映射
     };
 
     const CUSTOM_GROUP_FAMILY_ORDER = {
@@ -2803,9 +2804,11 @@ import { createAnnouncementModule } from './dashboard_announcements';
         if (!customGroupingModal || !lastSnapshot) return;
 
         // 初始化状态
-        const models = lastSnapshot.models || [];
+        // 分组管理应基于全部模型，而不是“当前可见模型”，避免被可见模型筛选误伤
+        const models = lastSnapshot.allModels || lastSnapshot.models || [];
         customGroupingState.allModels = models;
         customGroupingState.groupMappings = { ...(currentConfig.groupMappings || {}) };
+        customGroupingState.smartGroupCanonicalNames = null;
 
         // 从现有映射构建分组
         const groupMap = new Map(); // groupId -> { id, name, modelIds }
@@ -2930,6 +2933,7 @@ import { createAnnouncementModule } from './dashboard_announcements';
     }
 
     function handleAddGroup() {
+        customGroupingState.smartGroupCanonicalNames = null;
         const newGroupId = 'custom_group_' + Date.now();
         customGroupingState.groups.push({
             id: newGroupId,
@@ -2940,6 +2944,7 @@ import { createAnnouncementModule } from './dashboard_announcements';
     }
 
     function handleDeleteGroup(e) {
+        customGroupingState.smartGroupCanonicalNames = null;
         const index = parseInt(e.target.dataset.groupIndex, 10);
         if (!isNaN(index) && index >= 0 && index < customGroupingState.groups.length) {
             customGroupingState.groups.splice(index, 1);
@@ -2948,6 +2953,7 @@ import { createAnnouncementModule } from './dashboard_announcements';
     }
 
     function handleRemoveModel(e) {
+        customGroupingState.smartGroupCanonicalNames = null;
         e.stopPropagation();
         const groupIndex = parseInt(e.target.dataset.groupIndex, 10);
         const modelId = e.target.dataset.modelId;
@@ -2962,6 +2968,7 @@ import { createAnnouncementModule } from './dashboard_announcements';
     }
 
     function handleGroupNameChange(e) {
+        customGroupingState.smartGroupCanonicalNames = null;
         const index = parseInt(e.target.dataset.groupIndex, 10);
         if (!isNaN(index) && customGroupingState.groups[index]) {
             customGroupingState.groups[index].name = e.target.value.trim() || `Group ${index + 1}`;
@@ -2969,6 +2976,7 @@ import { createAnnouncementModule } from './dashboard_announcements';
     }
 
     function handleAddModelToGroup(e) {
+        customGroupingState.smartGroupCanonicalNames = null;
         const groupIndex = parseInt(e.target.dataset.groupIndex, 10);
         if (isNaN(groupIndex)) return;
 
@@ -3237,16 +3245,9 @@ import { createAnnouncementModule } from './dashboard_announcements';
             },
         ];
 
-        // 保存现有分组名称映射（modelId -> groupName）
-        const existingGroupNames = {};
-        for (const group of customGroupingState.groups) {
-            for (const modelId of group.modelIds) {
-                existingGroupNames[modelId] = group.name;
-            }
-        }
-
         // 按固定分组分配模型
         const groupMap = new Map(); // groupId -> { id, name, modelIds }
+        const smartGroupCanonicalNames = {};
         for (const defaultGroup of defaultGroups) {
             const groupModels = [];
             
@@ -3260,26 +3261,13 @@ import { createAnnouncementModule } from './dashboard_announcements';
             }
 
             if (groupModels.length > 0) {
-                // 尝试继承现有分组名称
-                let inheritedName = '';
                 for (const modelId of groupModels) {
-                    if (existingGroupNames[modelId]) {
-                        inheritedName = existingGroupNames[modelId];
-                        break;
-                    }
+                    smartGroupCanonicalNames[modelId] = defaultGroup.name;
                 }
-
-                const shouldUseDefaultName =
-                    !inheritedName ||
-                    inheritedName === 'G3-Pro' ||
-                    inheritedName === 'G3-Flash' ||
-                    inheritedName === 'G3-Image' ||
-                    inheritedName === 'Gemini 3 Pro Image' ||
-                    inheritedName === 'Claude 4';
-                
                 groupMap.set(defaultGroup.id, {
                     id: defaultGroup.id,
-                    name: shouldUseDefaultName ? defaultGroup.name : inheritedName,
+                    // 点击“自动分组”时强制以固定分组名称覆盖，避免继承历史自定义组名
+                    name: defaultGroup.name,
                     modelIds: groupModels
                 });
             }
@@ -3287,6 +3275,7 @@ import { createAnnouncementModule } from './dashboard_announcements';
 
         // 转换为数组
         customGroupingState.groups = sortGroupsForDisplay(Array.from(groupMap.values()), models);
+        customGroupingState.smartGroupCanonicalNames = smartGroupCanonicalNames;
 
         renderCustomGroupingContent();
         const smartGroupMsg = (i18n['customGrouping.smartGroupCount'] || 'Auto Group: {count} groups').replace('{count}', customGroupingState.groups.length);
@@ -3304,16 +3293,24 @@ import { createAnnouncementModule } from './dashboard_announcements';
         // 构建新的 groupMappings
         const newMappings = {};
         const newGroupNames = {};
+        const smartGroupCanonicalNames = customGroupingState.smartGroupCanonicalNames;
 
         for (const group of customGroupingState.groups) {
             // 生成稳定的 groupId
             const stableGroupId = group.modelIds.sort().join('_');
             for (const modelId of group.modelIds) {
                 newMappings[modelId] = stableGroupId;
-                // 使用锚点共识机制保存分组名称
-                newGroupNames[modelId] = group.name;
+                // 自动分组后保存时强制覆盖组名，并通过“仅写当前分组模型”清理旧残留名称映射
+                if (smartGroupCanonicalNames && smartGroupCanonicalNames[modelId]) {
+                    newGroupNames[modelId] = smartGroupCanonicalNames[modelId];
+                } else {
+                    // 使用锚点共识机制保存分组名称
+                    newGroupNames[modelId] = group.name;
+                }
             }
         }
+
+        customGroupingState.smartGroupCanonicalNames = null;
 
         // 发送到扩展保存
         vscode.postMessage({

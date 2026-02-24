@@ -61,6 +61,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // 初始化日志
     logger.init();
     await configService.initialize(context);
+    const modelPrefMigrationSummary = configService.getLastModelPreferenceMigrationSummary();
+    if (modelPrefMigrationSummary?.changed) {
+        const replacedRefs = Object.values(modelPrefMigrationSummary.replacementCounts)
+            .reduce((sum, count) => sum + count, 0);
+        void vscode.window.showInformationMessage(
+            `部分已下线模型已自动迁移到新版本（更新 ${replacedRefs} 处引用：${modelPrefMigrationSummary.changedFields.join(', ')}）。`,
+        );
+    }
 
     // 记录当前实例的 user-data-dir（用于读取正确的 state.vscdb）
     try {

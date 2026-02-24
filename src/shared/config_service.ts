@@ -6,6 +6,10 @@
 import * as vscode from 'vscode';
 import { CONFIG_KEYS, TIMING, LOG_LEVELS, STATUS_BAR_FORMAT, QUOTA_THRESHOLDS, DISPLAY_MODE } from './constants';
 import { logger } from './log_service';
+import {
+    normalizeModelPreferenceState,
+    type ModelPreferenceMigrationSummary,
+} from './model_preference_migration';
 
 /** 配置对象接口 */
 export interface CockpitConfig {
@@ -61,6 +65,7 @@ class ConfigService {
     private configChangeListeners: Array<(config: CockpitConfig) => void> = [];
     private globalState?: vscode.Memento;
     private initialized = false;
+    private lastModelPreferenceMigrationSummary?: ModelPreferenceMigrationSummary;
     private readonly stateKeys = new Set<keyof CockpitConfig>([
         'groupMappings',
         'groupOrder',
@@ -93,6 +98,7 @@ class ConfigService {
         this.globalState = context.globalState;
         this.initialized = true;
         await this.migrateSettingsToState();
+        await this.migrateDeprecatedModelPreferences();
         await this.cleanupLegacySettings();
         await this.ensureAuthorizedQuotaSource();
     }
@@ -220,6 +226,10 @@ class ConfigService {
         this.configChangeListeners.forEach(listener => listener(newConfig));
     }
 
+    getLastModelPreferenceMigrationSummary(): ModelPreferenceMigrationSummary | undefined {
+        return this.lastModelPreferenceMigrationSummary;
+    }
+
     /**
      * 更新配置项
      */
@@ -228,7 +238,10 @@ class ConfigService {
         value: CockpitConfig[K], 
         target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Global,
     ): Promise<void> {
-        const normalizedValue = (key === 'quotaSource' ? 'authorized' : value) as CockpitConfig[K];
+        const normalizedValue = this.normalizeModelPreferenceConfigValue(
+            key,
+            (key === 'quotaSource' ? 'authorized' : value) as CockpitConfig[K],
+        );
         if (this.isStateKey(key) && this.globalState) {
             const stateKey = this.buildStateKey(key);
             logger.info(`Updating state '${stateKey}':`, JSON.stringify(normalizedValue));
@@ -240,6 +253,65 @@ class ConfigService {
         logger.info(`Updating config '${this.configSection}.${key}':`, JSON.stringify(normalizedValue));
         const config = vscode.workspace.getConfiguration(this.configSection);
         await config.update(key, normalizedValue, target);
+    }
+
+    private normalizeModelPreferenceConfigValue<K extends keyof CockpitConfig>(
+        key: K,
+        value: CockpitConfig[K],
+    ): CockpitConfig[K] {
+        switch (key) {
+            case 'visibleModels': {
+                const { normalized, summary } = normalizeModelPreferenceState({ visibleModels: value as string[] });
+                this.logInlineModelPreferenceNormalization('visibleModels', summary);
+                return normalized.visibleModels as CockpitConfig[K];
+            }
+            case 'pinnedModels': {
+                const { normalized, summary } = normalizeModelPreferenceState({ pinnedModels: value as string[] });
+                this.logInlineModelPreferenceNormalization('pinnedModels', summary);
+                return normalized.pinnedModels as CockpitConfig[K];
+            }
+            case 'modelOrder': {
+                const { normalized, summary } = normalizeModelPreferenceState({ modelOrder: value as string[] });
+                this.logInlineModelPreferenceNormalization('modelOrder', summary);
+                return normalized.modelOrder as CockpitConfig[K];
+            }
+            case 'modelCustomNames': {
+                const { normalized, summary } = normalizeModelPreferenceState({
+                    modelCustomNames: value as Record<string, string>,
+                });
+                this.logInlineModelPreferenceNormalization('modelCustomNames', summary);
+                return normalized.modelCustomNames as CockpitConfig[K];
+            }
+            case 'groupingCustomNames': {
+                const { normalized, summary } = normalizeModelPreferenceState({
+                    groupingCustomNames: value as Record<string, string>,
+                });
+                this.logInlineModelPreferenceNormalization('groupingCustomNames', summary);
+                return normalized.groupingCustomNames as CockpitConfig[K];
+            }
+            case 'groupMappings': {
+                const { normalized, summary } = normalizeModelPreferenceState({
+                    groupMappings: value as Record<string, string>,
+                });
+                this.logInlineModelPreferenceNormalization('groupMappings', summary);
+                return normalized.groupMappings as CockpitConfig[K];
+            }
+            default:
+                return value;
+        }
+    }
+
+    private logInlineModelPreferenceNormalization(
+        field: string,
+        summary: ModelPreferenceMigrationSummary,
+    ): void {
+        if (!summary.changed) {
+            return;
+        }
+        logger.info(
+            `[ConfigService] Canonicalized deprecated model references in ${field}`,
+            summary.replacementCounts,
+        );
     }
 
     /**
@@ -502,6 +574,39 @@ class ConfigService {
                 await this.clearSetting(key);
             }
         }
+    }
+
+    private async migrateDeprecatedModelPreferences(): Promise<void> {
+        if (!this.globalState) {
+            return;
+        }
+
+        const current = {
+            visibleModels: this.getConfigStateValue(CONFIG_KEYS.VISIBLE_MODELS, []),
+            pinnedModels: this.getConfigStateValue(CONFIG_KEYS.PINNED_MODELS, []),
+            modelOrder: this.getConfigStateValue(CONFIG_KEYS.MODEL_ORDER, []),
+            modelCustomNames: this.getConfigStateValue(CONFIG_KEYS.MODEL_CUSTOM_NAMES, {}),
+            groupingCustomNames: this.getConfigStateValue(CONFIG_KEYS.GROUPING_CUSTOM_NAMES, {}),
+            groupMappings: this.getConfigStateValue(CONFIG_KEYS.GROUP_MAPPINGS, {}),
+        };
+
+        const { normalized, summary } = normalizeModelPreferenceState(current);
+        this.lastModelPreferenceMigrationSummary = summary.changed ? summary : undefined;
+        if (!summary.changed) {
+            return;
+        }
+
+        logger.info(
+            `[ConfigService] Migrated deprecated model preferences: fields=${summary.changedFields.join(', ')}`,
+            summary.replacementCounts,
+        );
+
+        await this.globalState.update(this.buildStateKey(CONFIG_KEYS.VISIBLE_MODELS), normalized.visibleModels ?? []);
+        await this.globalState.update(this.buildStateKey(CONFIG_KEYS.PINNED_MODELS), normalized.pinnedModels ?? []);
+        await this.globalState.update(this.buildStateKey(CONFIG_KEYS.MODEL_ORDER), normalized.modelOrder ?? []);
+        await this.globalState.update(this.buildStateKey(CONFIG_KEYS.MODEL_CUSTOM_NAMES), normalized.modelCustomNames ?? {});
+        await this.globalState.update(this.buildStateKey(CONFIG_KEYS.GROUPING_CUSTOM_NAMES), normalized.groupingCustomNames ?? {});
+        await this.globalState.update(this.buildStateKey(CONFIG_KEYS.GROUP_MAPPINGS), normalized.groupMappings ?? {});
     }
 
     private async clearSetting(configKey: string): Promise<void> {
