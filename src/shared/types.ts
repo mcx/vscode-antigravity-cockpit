@@ -347,6 +347,7 @@ export type WebviewMessageType =
     | 'autoTrigger.reauthorizeAccount'
     | 'autoTrigger.importLocal'
     | 'autoTrigger.importLocalConfirm'
+    | 'autoTrigger.confirmRisk'
     | 'autoTrigger.saveSchedule'
     | 'autoTrigger.test'
     | 'autoTrigger.validateCrontab'
@@ -434,6 +435,8 @@ export interface WebviewMessage {
     tab?: string;
     /** 调度配置 (autoTrigger.saveSchedule) */
     schedule?: ScheduleConfig;
+    /** 风险确认场景 (autoTrigger.confirmRisk) */
+    riskAction?: 'enable' | 'test';
     /** Crontab 表达式 (autoTrigger.validateCrontab) */
     crontab?: string;
     /** 手动测试模型列表 (autoTrigger.test) */

@@ -675,6 +675,26 @@ export class MessageController {
                     }
                     break;
 
+                case 'autoTrigger.confirmRisk':
+                    {
+                        const riskAction = message.riskAction === 'test' ? 'test' : 'enable';
+                        const warningText = t('autoTrigger.enableRiskWarning');
+                        const confirmLabel = t('common.confirm') || 'Confirm';
+                        const selection = await vscode.window.showWarningMessage(
+                            warningText,
+                            { modal: true },
+                            confirmLabel,
+                        );
+                        this.hud.sendMessage({
+                            type: 'autoTriggerRiskConfirmResult',
+                            data: {
+                                action: riskAction,
+                                confirmed: selection === confirmLabel,
+                            },
+                        });
+                    }
+                    break;
+
                 case 'autoTrigger.saveSchedule':
                     if (message.schedule) {
                         logger.info('User saved auto trigger schedule');

@@ -444,6 +444,7 @@ export const zhCN = {
     'autoTrigger.maxOutputTokensLabel': '最大输出 Token',
     'autoTrigger.maxOutputTokensHint': '默认 0（不限制）。数值越大回复越长，token 消耗也越多。',
     'autoTrigger.enableAutoWakeup': '启用唤醒功能',
+    'autoTrigger.enableRiskWarning': '⚠️ 风险提示\n近期 Google 风控策略收紧，使用唤醒功能可能提高账号触发风控的概率（包括但不限于额外验证、临时限制等）。\n请根据账号实际情况谨慎使用，并自行评估风险。\n\n确认继续？',
     'autoTrigger.triggerMode': '唤醒方式',
     'autoTrigger.triggerModeHint': '1. 定时触发：按设定时间/周期唤醒。\n2. Crontab：用表达式定义触发时间。\n3. 配额重置自动唤醒：配额恢复满额时唤醒一次。',
     'autoTrigger.modeScheduled': '定时触发',

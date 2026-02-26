@@ -420,6 +420,7 @@ export const ja = {
     'autoTrigger.maxOutputTokensLabel': '最大出力トークン数',
     'autoTrigger.maxOutputTokensHint': 'デフォルト 0（無制限）。値が大きいほど返信が長くなり、トークン消費量も増えます。',
     'autoTrigger.enableAutoWakeup': 'ウェイクアップ機能を有効にする',
+    'autoTrigger.enableRiskWarning': '⚠️ リスク警告\n最近 Google のリスク制御が厳しくなっており、ウェイクアップ機能を有効にすると、アカウントが追加認証や一時制限などのリスク制御対象になる可能性が高まる場合があります。\nご自身の利用状況に応じて、リスクを許容できる場合のみ有効化してください。\n\nウェイクアップ機能を有効にしますか？',
     'autoTrigger.triggerMode': 'ウェイクアップ方法',
     'autoTrigger.triggerModeHint': '1. 定時トリガー：設定した時間/周期で起動。\n2. Crontab：式でトリガー時間を定義。\n3. クォータリセット自動起動：クォータが満額に回復したら1回起動。',
     'autoTrigger.modeScheduled': '定時トリガー',

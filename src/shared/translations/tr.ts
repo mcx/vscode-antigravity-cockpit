@@ -419,6 +419,7 @@ export const tr = {
     'autoTrigger.customPromptHint': 'Uyandırma için yapay zekaya gönderilen mesaj; varsayılan "hi" için boş bırakın.',
     'autoTrigger.maxOutputTokensLabel': 'Maksimum Çıkış Belirteçleri',
     'autoTrigger.maxOutputTokensHint': 'Varsayılan 0 (sınırsız). Daha büyük değerler daha uzun yanıtlar ve daha fazla token tüketimi anlamına gelir.',
+    'autoTrigger.enableRiskWarning': '⚠️ Risk uyarısı\nGoogle risk kontrollerinin son dönemde sıkılaşması nedeniyle, uyandırma özelliğini etkinleştirmek hesapta risk kontrol işlemleri uygulanma olasılığını artırabilir (ek doğrulama veya geçici kısıtlamalar dahil).\nBu riski hesabınız için kabul edebiliyorsanız özelliği etkinleştirin.\n\nUyandırmayı etkinleştirmeye devam edilsin mi?',
 
     // Zaman Penceresi Politikası
     'autoTrigger.timeWindowEnabled': 'Zaman penceresi politikasını etkinleştir',

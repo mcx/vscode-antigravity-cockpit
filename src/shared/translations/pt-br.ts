@@ -417,6 +417,7 @@ export const ptBR = {
     'autoTrigger.maxOutputTokensLabel': 'Máximo de tokens de saída',
     'autoTrigger.maxOutputTokensHint': 'Padrão 0 (sem limite). Valores maiores significam respostas mais longas e maior consumo de tokens.',
     'autoTrigger.enableAutoWakeup': 'Ativar função de despertar',
+    'autoTrigger.enableRiskWarning': '⚠️ Aviso de risco\nDevido ao endurecimento recente dos controles de risco do Google, ativar a função de despertar pode aumentar a chance de ações de controle de risco na conta (incluindo verificação adicional ou restrições temporárias).\nAtive apenas se esse risco for aceitável para a sua conta.\n\nDeseja continuar e ativar o despertar?',
     'autoTrigger.triggerMode': 'Método de despertar',
     'autoTrigger.triggerModeHint': '1. Agendado: ativa nos horários/intervalos definidos.\n2. Crontab: define o horário com uma expressão.\n3. Reset de cota: ativa uma vez quando a cota é totalmente restaurada.',
     'autoTrigger.modeScheduled': 'Gatilho agendado',

@@ -417,6 +417,7 @@ export const de = {
     'autoTrigger.maxOutputTokensLabel': 'Maximale Ausgabe-Token',
     'autoTrigger.maxOutputTokensHint': 'Standardwert 0 (unbegrenzt). Größere Werte bedeuten längere Antworten und mehr Token-Verbrauch.',
     'autoTrigger.enableAutoWakeup': 'Weck-Funktion aktivieren',
+    'autoTrigger.enableRiskWarning': '⚠️ Risikohinweis\nAufgrund zuletzt verschärfter Google-Risikokontrollen kann das Aktivieren der Weck-Funktion die Wahrscheinlichkeit von Risiko-Maßnahmen für Ihr Konto erhöhen (z. B. zusätzliche Verifizierung oder vorübergehende Einschränkungen).\nAktivieren Sie die Funktion nur, wenn dieses Risiko für Ihr Konto akzeptabel ist.\n\nWeck-Funktion trotzdem aktivieren?',
     'autoTrigger.triggerMode': 'Weck-Methode',
     'autoTrigger.triggerModeHint': '1. Zeitgesteuert: Auslösen zu festgelegten Zeiten/Intervallen.\n2. Crontab: Auslösezeit per Ausdruck definieren.\n3. Kontingent-Reset: Einmal auslösen, wenn das Kontingent wieder voll ist.',
     'autoTrigger.modeScheduled': 'Zeitgesteuerter Trigger',

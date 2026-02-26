@@ -41,6 +41,7 @@
     let antigravityToolsAutoSwitchEnabled = true;
     let testSelectedModels = [];
     let testSelectedAccounts = [];
+    let riskConfirmPending = false;
 
     // 配置状态
     let configEnabled = false;
@@ -136,7 +137,7 @@
         document.getElementById('at-test-btn')?.addEventListener('click', openTestModal);
         document.getElementById('at-test-close')?.addEventListener('click', closeTestModal);
         document.getElementById('at-test-cancel')?.addEventListener('click', closeTestModal);
-        document.getElementById('at-test-run')?.addEventListener('click', runTest);
+        document.getElementById('at-test-run')?.addEventListener('click', requestTestRunWithRiskWarning);
 
         // 历史按钮
         document.getElementById('at-history-btn')?.addEventListener('click', openHistoryModal);
@@ -163,7 +164,20 @@
 
         // 总开关
         document.getElementById('at-enable-schedule')?.addEventListener('change', (e) => {
-            configEnabled = e.target.checked;
+            const target = e.target;
+            if (!(target instanceof HTMLInputElement)) {
+                return;
+            }
+
+            if (target.checked) {
+                target.checked = false;
+                configEnabled = false;
+                updateConfigAvailability();
+                requestRiskWarningConfirm('enable');
+                return;
+            }
+
+            configEnabled = target.checked;
             updateConfigAvailability();
         });
 
@@ -556,6 +570,44 @@
         });
 
         closeConfigModal();
+    }
+
+    function requestRiskWarningConfirm(action) {
+        if (riskConfirmPending) {
+            return;
+        }
+        riskConfirmPending = true;
+        vscode.postMessage({
+            command: 'autoTrigger.confirmRisk',
+            riskAction: action,
+        });
+    }
+
+    function handleRiskConfirmResult(payload) {
+        riskConfirmPending = false;
+        const action = payload?.action;
+        const confirmed = Boolean(payload?.confirmed);
+
+        if (action === 'enable') {
+            const enableInput = document.getElementById('at-enable-schedule');
+            if (enableInput instanceof HTMLInputElement) {
+                enableInput.checked = confirmed;
+            }
+            configEnabled = confirmed;
+            updateConfigAvailability();
+            return;
+        }
+
+        if (action === 'test' && confirmed) {
+            runTest();
+        }
+    }
+
+    function requestTestRunWithRiskWarning() {
+        if (isTestRunning) {
+            return;
+        }
+        requestRiskWarningConfirm('test');
     }
 
     let isTestRunning = false;  // 防止重复点击
@@ -1728,6 +1780,9 @@
                 if (message.data?.autoSwitchEnabled !== undefined) {
                     setAntigravityToolsAutoSwitchEnabled(Boolean(message.data.autoSwitchEnabled));
                 }
+                break;
+            case 'autoTriggerRiskConfirmResult':
+                handleRiskConfirmResult(message.data);
                 break;
         }
     });

@@ -417,6 +417,7 @@ export const es = {
     'autoTrigger.maxOutputTokensLabel': 'Máximo de tokens de salida',
     'autoTrigger.maxOutputTokensHint': 'Por defecto 0 (sin límite). Los valores más altos significan respuestas más largas y más consumo de tokens.',
     'autoTrigger.enableAutoWakeup': 'Activar función de despertar',
+    'autoTrigger.enableRiskWarning': '⚠️ Advertencia de riesgo\nDebido al endurecimiento reciente de los controles de riesgo de Google, habilitar la función de despertar puede aumentar la probabilidad de medidas de control de riesgo en la cuenta (incluyendo verificación adicional o restricciones temporales).\nActívala solo si este riesgo es aceptable para tu cuenta.\n\n¿Desea continuar y activar la función de despertar?',
     'autoTrigger.triggerMode': 'Método de despertar',
     'autoTrigger.triggerModeHint': '1. Programado: se activa en horarios/intervalos definidos.\n2. Crontab: define la hora con una expresión.\n3. Restablecimiento de cuota: se activa una vez cuando la cuota se restablece.',
     'autoTrigger.modeScheduled': 'Activador programado',

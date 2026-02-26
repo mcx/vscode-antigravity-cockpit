@@ -454,6 +454,7 @@ export const en = {
     'autoTrigger.customPromptHint': 'Message sent to AI for wake-up, leave empty to use default "hi".',
     'autoTrigger.maxOutputTokensLabel': 'Max Output Tokens',
     'autoTrigger.maxOutputTokensHint': 'Default 0 (no limit). Larger values mean longer replies and more token consumption.',
+    'autoTrigger.enableRiskWarning': '⚠️ Risk warning\nDue to tighter Google risk controls recently, using wake-up features may increase the chance of account risk-control actions (including extra verification or temporary restrictions).\nPlease continue only if this risk is acceptable for your account.\n\nContinue?',
 
     // Time Window Policy
     'autoTrigger.timeWindowEnabled': 'Enable Time Window Policy',

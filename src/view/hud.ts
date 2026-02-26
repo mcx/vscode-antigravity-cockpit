@@ -575,9 +575,6 @@ export class CockpitHUD {
             'refresh': t('accountsOverview.refresh') || 'Refresh',
             'switch': t('accountsOverview.switch') || 'Switch',
             'delete': t('accountsOverview.delete') || 'Delete',
-            'fingerprint': t('accountsOverview.fingerprint') || 'Fingerprint',
-            'bound': t('accountsOverview.bound') || 'Bound',
-            'unbound': t('accountsOverview.unbound') || 'Unbound',
             'updated': t('accountsOverview.updated') || 'Updated',
             'confirmDelete': t('accountsOverview.confirmDelete') || 'Confirm delete account?',
             'confirmDeleteBatch': t('accountsOverview.confirmDeleteBatch') || 'Confirm delete {count} selected accounts?',
@@ -601,7 +598,6 @@ export class CockpitHUD {
             'filterUltra': t('accountsOverview.filterUltra') || 'ULTRA',
             'filterFree': t('accountsOverview.filterFree') || 'FREE',
             'columnEmail': t('accountsOverview.columnEmail') || 'Email',
-            'columnFingerprint': t('accountsOverview.columnFingerprint') || 'Fingerprint',
             'columnQuota': t('accountsOverview.columnQuota') || 'Quota',
             'columnActions': t('accountsOverview.columnActions') || 'Actions',
             'quotaDetails': t('accountsOverview.quotaDetails') || 'Quota Details',
@@ -912,7 +908,6 @@ export class CockpitHUD {
                                     <input type="checkbox" id="ao-select-all" />
                                 </th>
                                 <th style="width: 240px;">${t('accountsOverview.columnEmail')}</th>
-                                <th style="width: 140px;">${t('accountsOverview.columnFingerprint')}</th>
                                 <th>${t('accountsOverview.columnQuota')}</th>
                                 <th class="sticky-action-header table-action-header">${t('accountsOverview.columnActions')}</th>
                             </tr>

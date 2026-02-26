@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.26] - 2026-02-26
+
+### Changed
+- **Auto wake-up default off**: Wake-up remains disabled by default, and users can enable it manually when needed.
+- **Enable-time risk prompt**: Turning on wake-up now shows a warning about recently tightened Google risk controls and potential account impact.
+- **Announcement source migrated to repo**: Announcement data is now stored in repo-root `announcements.json` / `announcements_dev.json`, and the remote source now reads from this repository's Raw URLs.
+
+---
+
 ## [2.1.25] - 2026-02-25
 
 ### Changed

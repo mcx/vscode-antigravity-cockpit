@@ -473,6 +473,8 @@ export const vi = {
     'autoTrigger.maxOutputTokensLabel': 'Token đầu ra tối đa',
     'autoTrigger.maxOutputTokensHint':
         'Mặc định 0 (không giới hạn). Giá trị lớn hơn nghĩa là phản hồi dài hơn và tiêu tốn nhiều token hơn.',
+    'autoTrigger.enableRiskWarning':
+        '⚠️ Cảnh báo rủi ro\nDo cơ chế kiểm soát rủi ro của Google gần đây được siết chặt, việc bật tính năng đánh thức có thể làm tăng khả năng tài khoản bị áp dụng biện pháp kiểm soát rủi ro (bao gồm xác minh bổ sung hoặc hạn chế tạm thời).\nChỉ bật nếu bạn chấp nhận mức rủi ro này cho tài khoản của mình.\n\nTiếp tục bật tính năng đánh thức?',
 
     // Chính sách cửa sổ thời gian
     'autoTrigger.timeWindowEnabled': 'Bật chính sách cửa sổ thời gian',

@@ -9,7 +9,6 @@
  * 数据来源：
  * - 账号列表：Cockpit Tools (WebSocket)
  * - 配额数据：ReactorCore.fetchQuotaForAccount (插件端逻辑，邮箱匹配)
- * - 设备指纹：Cockpit Tools (WebSocket)
  */
 
 import * as vscode from 'vscode';
@@ -30,7 +29,7 @@ import { t } from '../shared/i18n';
 // Tree Node Types
 // ============================================================================
 
-export type AccountTreeItem = AccountNode | GroupNode | ModelNode | ToolsStatusNode | DeviceNode | LoadingNode | ErrorNode;
+export type AccountTreeItem = AccountNode | GroupNode | ModelNode | ToolsStatusNode | LoadingNode | ErrorNode;
 
 /**
  * 账号节点 (第1层)
@@ -39,7 +38,6 @@ export class AccountNode extends vscode.TreeItem {
     constructor(
         public readonly email: string,
         public readonly isCurrent: boolean,
-        public readonly hasDeviceBound: boolean,
         public readonly isInvalid?: boolean,
         public readonly isForbidden?: boolean,
     ) {
@@ -66,7 +64,6 @@ export class AccountNode extends vscode.TreeItem {
             isInvalid ? `⚠️ ${t('accountsRefresh.authExpired')}` : '',
             isForbidden ? `🔒 ${t('accountsRefresh.forbidden')}` : '',
             isCurrent && !isInvalid ? t('accountTree.currentAccount') : '',
-            hasDeviceBound ? t('accountTree.fingerprintBound') : t('accountTree.fingerprintUnbound'),
         ].filter(Boolean);
         this.tooltip = parts.join('\n');
 
@@ -151,28 +148,6 @@ export class ToolsStatusNode extends vscode.TreeItem {
             ? 'Cockpit Tools WebSocket: Connected'
             : 'Cockpit Tools WebSocket: Disconnected';
         this.contextValue = online ? 'toolsOnline' : 'toolsOffline';
-    }
-}
-
-/**
- * 设备指纹节点
- */
-export class DeviceNode extends vscode.TreeItem {
-    constructor(
-        public readonly accountEmail: string,
-        public readonly bound: boolean,
-    ) {
-        super(
-            bound ? t('accountTree.fingerprintLabelBound') : t('accountTree.fingerprintLabelUnbound'),
-            vscode.TreeItemCollapsibleState.None,
-        );
-
-        this.iconPath = new vscode.ThemeIcon(
-            bound ? 'shield' : 'unlock',
-            bound ? new vscode.ThemeColor('charts.green') : undefined,
-        );
-        this.tooltip = bound ? t('accountTree.fingerprintTooltipBound') : t('accountTree.fingerprintTooltipUnbound');
-        this.contextValue = bound ? 'deviceBound' : 'deviceUnbound';
     }
 }
 
@@ -291,7 +266,6 @@ export class AccountTreeProvider implements vscode.TreeDataProvider<AccountTreeI
                 new AccountNode(
                     email,
                     account.isCurrent,
-                    account.hasDeviceBound,
                     account.isInvalid,
                     account.isForbidden,
                 ),
@@ -304,13 +278,11 @@ export class AccountTreeProvider implements vscode.TreeDataProvider<AccountTreeI
     private getAccountChildren(email: string): AccountTreeItem[] {
         const cache = this.refreshService.getQuotaCache(email);
         const account = this.refreshService.getAccount(email);
-        const hasDevice = account?.hasDeviceBound ?? false;
 
         if (account && !account.hasPluginCredential) {
             return [
                 new ErrorNode(t('accountTree.notImported')),
                 new ToolsStatusNode(email, cockpitToolsWs.isConnected),
-                new DeviceNode(email, hasDevice),
             ];
         }
 
@@ -324,7 +296,6 @@ export class AccountTreeProvider implements vscode.TreeDataProvider<AccountTreeI
             return [
                 new ErrorNode(cache.error),
                 new ToolsStatusNode(email, cockpitToolsWs.isConnected),
-                new DeviceNode(email, hasDevice),
             ];
         }
 
@@ -348,8 +319,6 @@ export class AccountTreeProvider implements vscode.TreeDataProvider<AccountTreeI
 
         // Tools 连接状态节点
         children.push(new ToolsStatusNode(email, cockpitToolsWs.isConnected));
-        // 设备指纹节点
-        children.push(new DeviceNode(email, hasDevice));
 
         return children;
     }

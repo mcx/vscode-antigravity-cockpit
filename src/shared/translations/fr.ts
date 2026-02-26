@@ -419,6 +419,7 @@ export const fr = {
     'autoTrigger.maxOutputTokensLabel': 'Nombre maximum de jetons de sortie',
     'autoTrigger.maxOutputTokensHint': 'Valeur par défaut 0 (illimitée). Des valeurs plus élevées signifient des réponses plus longues et une consommation de jetons plus importante.',
     'autoTrigger.enableAutoWakeup': 'Activer la fonction de réveil',
+    'autoTrigger.enableRiskWarning': '⚠️ Avertissement de risque\nEn raison d’un durcissement récent des contrôles de risque de Google, l’activation du réveil peut augmenter la probabilité d’actions de contrôle de risque sur le compte (y compris une vérification supplémentaire ou des restrictions temporaires).\nActivez cette fonction uniquement si ce risque est acceptable pour votre compte.\n\nContinuer et activer le réveil ?',
     'autoTrigger.triggerMode': 'Méthode de réveil',
     'autoTrigger.triggerModeHint': '1. Planifié : déclenche aux heures/périodes définies.\n2. Crontab : définit le moment avec une expression.\n3. Réinitialisation de quota : déclenche une fois lorsque le quota est entièrement rétabli.',
     'autoTrigger.modeScheduled': 'Déclencheur programmé',

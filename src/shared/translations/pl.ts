@@ -416,6 +416,7 @@ export const pl = {
     'autoTrigger.customPromptHint': 'Wiadomość wysyłana do AI w celu budzenia, zostaw puste dla domyślnego "hi".',
     'autoTrigger.maxOutputTokensLabel': 'Maks. liczba tokenów wyjściowych',
     'autoTrigger.maxOutputTokensHint': 'Domyślnie 0 (bez limitu). Większe wartości oznaczają dłuższe odpowiedzi i większe zużycie tokenów.',
+    'autoTrigger.enableRiskWarning': '⚠️ Ostrzeżenie o ryzyku\nZe względu na ostatnie zaostrzenie kontroli ryzyka Google, włączenie funkcji budzenia może zwiększyć prawdopodobieństwo działań kontrolnych na koncie (w tym dodatkowej weryfikacji lub tymczasowych ograniczeń).\nWłączaj tę funkcję tylko wtedy, gdy akceptujesz to ryzyko dla swojego konta.\n\nCzy kontynuować i włączyć funkcję budzenia?',
 
     // Polityka okna czasowego
     'autoTrigger.timeWindowEnabled': 'Włącz politykę okna czasowego',

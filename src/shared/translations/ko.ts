@@ -417,6 +417,7 @@ export const ko = {
     'autoTrigger.maxOutputTokensLabel': '최대 출력 토큰',
     'autoTrigger.maxOutputTokensHint': '기본값 0 (무제한). 값이 클수록 응답이 길어지고 토큰 소모량이 늘어납니다.',
     'autoTrigger.enableAutoWakeup': '깨우기 기능 활성화',
+    'autoTrigger.enableRiskWarning': '⚠️ 위험 경고\n최근 Google의 리스크 통제가 강화되어, 깨우기 기능을 켜면 계정에 대한 리스크 통제 조치(추가 인증, 일시 제한 등)가 발생할 가능성이 높아질 수 있습니다.\n이 위험을 감수할 수 있는 경우에만 기능을 활성화하세요.\n\n깨우기 기능을 계속 활성화하시겠습니까?',
     'autoTrigger.triggerMode': '깨우기 방법',
     'autoTrigger.triggerModeHint': '1. 예약 트리거: 설정된 시간/주기로 깨웁니다.\n2. Crontab: 식으로 트리거 시간을 정의합니다.\n3. 쿼터 리셋 자동 깨우기: 쿼터가 완전히 복구되면 한 번 깨웁니다.',
     'autoTrigger.modeScheduled': '예약된 트리거',

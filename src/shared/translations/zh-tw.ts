@@ -442,6 +442,7 @@ export const zhTW = {
     'autoTrigger.maxOutputTokensLabel': '最大輸出 Token',
     'autoTrigger.maxOutputTokensHint': '預設 0（不限制）。數值越大回覆越長，token 消耗也越多。',
     'autoTrigger.enableAutoWakeup': '啟用喚醒功能',
+    'autoTrigger.enableRiskWarning': '⚠️ 風險提示\n近期 Google 風控策略收緊，使用喚醒功能可能提高帳號觸發風控的機率（包含但不限於額外驗證、暫時限制等）。\n請依你的帳號實際情況謹慎使用，並自行評估風險。\n\n確認繼續？',
     'autoTrigger.triggerMode': '喚醒方式',
     'autoTrigger.triggerModeHint': '1. 定時觸發：按設定時間/週期喚醒。\n2. Crontab：用表達式定義觸發時間。\n3. 配額重置自動喚醒：配額恢復滿額時喚醒一次。',
     'autoTrigger.modeScheduled': '定時觸發',

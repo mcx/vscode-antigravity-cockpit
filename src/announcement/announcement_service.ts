@@ -8,9 +8,9 @@ import { Announcement, AnnouncementResponse, AnnouncementState } from './types';
 import { logger } from '../shared/log_service';
 import { i18n } from '../shared/i18n';
 
-// 公告源 URL（GitHub Gist Raw URL）
-const ANNOUNCEMENT_URL_PROD = 'https://gist.githubusercontent.com/jlcodes99/49facf261e9479a5b50fb81e4ab0afad/raw/announcements.json';
-const ANNOUNCEMENT_URL_DEV = 'https://gist.githubusercontent.com/jlcodes99/5618ef028eeaa7bdf6c45eca176f2a0a/raw/announcements_dev.json';
+// 公告源 URL（当前仓库 GitHub Raw URL）
+const ANNOUNCEMENT_URL_PROD = 'https://raw.githubusercontent.com/jlcodes99/vscode-antigravity-cockpit/main/announcements.json';
+const ANNOUNCEMENT_URL_DEV = 'https://raw.githubusercontent.com/jlcodes99/vscode-antigravity-cockpit/main/announcements_dev.json';
 
 const READ_IDS_KEY = 'announcement_read_ids';
 const CACHE_KEY = 'announcement_cache';

@@ -417,6 +417,7 @@ export const it = {
     'autoTrigger.maxOutputTokensLabel': 'Massimo token di output',
     'autoTrigger.maxOutputTokensHint': 'Predefinito 0 (nessun limite). Valori più alti significano risposte più lunghe e maggiore consumo di token.',
     'autoTrigger.enableAutoWakeup': 'Abilita funzione di risveglio',
+    'autoTrigger.enableRiskWarning': '⚠️ Avviso di rischio\nA causa del recente irrigidimento dei controlli di rischio di Google, abilitare la funzione di risveglio può aumentare la probabilità di misure di controllo sul tuo account (tra cui verifica aggiuntiva o limitazioni temporanee).\nAbilita questa funzione solo se tale rischio è accettabile per il tuo account.\n\nVuoi continuare e abilitare il risveglio?',
     'autoTrigger.triggerMode': 'Metodo di risveglio',
     'autoTrigger.triggerModeHint': '1. Programmato: attiva a orari/intervalli impostati.\n2. Crontab: definisce l’orario con un’espressione.\n3. Reset quota: attiva una volta quando la quota è completamente ripristinata.',
     'autoTrigger.modeScheduled': 'Trigger programmato',

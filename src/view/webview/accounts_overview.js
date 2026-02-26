@@ -481,10 +481,6 @@
         const tierBadge = tier ? `<span class="tier-badge ${tierClass}">${tier}</span>` : '';
         const isCurrent = account.isCurrent;
         const isSelected = selected.has(account.email);
-        const fingerprintStatus = account.hasDeviceBound
-            ? `${getString('bound', 'Bound')}`
-            : `${getString('unbound', 'Unbound')}`;
-        const fingerprintClass = account.hasDeviceBound ? 'bound' : 'unbound';
         const toolsStatus = toolsConnected ? 'Online' : 'Offline';
         const toolsClass = toolsConnected ? 'bound' : 'unbound';
 
@@ -507,7 +503,6 @@
                     <div class="card-meta">
                         <span class="card-date">${escapeHtml(formatDate(account.lastUpdated))}</span>
                         <span class="fingerprint-pill ${toolsClass}">🔗 Tools: ${toolsStatus}</span>
-                        <span class="fingerprint-pill ${fingerprintClass}">${escapeHtml(getString('fingerprint', 'Fingerprint'))}: ${fingerprintStatus}</span>
                     </div>
                     <div class="card-actions">
                         <button class="card-action-btn" data-action="details" data-email="${escapeHtml(account.email)}" title="${escapeHtml(getString('details', 'Details'))}">ℹ️</button>
@@ -527,10 +522,8 @@
         const tierBadge = tier ? `<span class="tier-badge ${tierClass}">${tier}</span>` : '';
         const isCurrent = account.isCurrent;
         const isSelected = selected.has(account.email);
-        const fingerprintStatus = account.hasDeviceBound
-            ? `${getString('bound', 'Bound')}`
-            : `${getString('unbound', 'Unbound')}`;
-        const fingerprintClass = account.hasDeviceBound ? 'bound' : 'unbound';
+        const toolsStatus = toolsConnected ? 'Online' : 'Offline';
+        const toolsClass = toolsConnected ? 'bound' : 'unbound';
 
         const quotaContent = account.loading
             ? `<span class="quota-empty">${escapeHtml(getString('loading', 'Loading...'))}</span>`
@@ -551,12 +544,9 @@
                         </div>
                         <div class="account-sub-line">
                             ${tierBadge}
+                            <span class="fingerprint-status ${toolsClass}">🔗 Tools: ${toolsStatus}</span>
                         </div>
                     </div>
-                </td>
-                <td>
-                    <span class="fingerprint-status ${toolsConnected ? 'bound' : 'unbound'}">🔗 Tools: ${toolsConnected ? 'Online' : 'Offline'}</span>
-                    <span class="fingerprint-status ${fingerprintClass}">${escapeHtml(getString('fingerprint', 'Fingerprint'))}: ${fingerprintStatus}</span>
                 </td>
                 <td>
                     <div class="quota-grid">

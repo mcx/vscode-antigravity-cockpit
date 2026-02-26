@@ -391,6 +391,7 @@ export const cs = {
     'autoTrigger.customPromptHint': 'Zpráva odeslaná AI pro probuzení, ponechte prázdné pro výchozí "hi".',
     'autoTrigger.maxOutputTokensLabel': 'Max. počet výstupních tokenů',
     'autoTrigger.maxOutputTokensHint': 'Výchozí 0 (bez omezení). Vyšší hodnoty znamenají delší odpovědi a vyšší spotřebu tokenů.',
+    'autoTrigger.enableRiskWarning': '⚠️ Upozornění na riziko\nKvůli nedávnému zpřísnění kontrol rizik Google může zapnutí funkce probuzení zvýšit pravděpodobnost zásahů řízení rizik u účtu (včetně dodatečného ověření nebo dočasných omezení).\nTuto funkci zapínejte pouze tehdy, pokud je toto riziko pro váš účet přijatelné.\n\nPokračovat a zapnout funkci probuzení?',
 
     // Politika časového okna
     'autoTrigger.timeWindowEnabled': 'Povolit politiku časového okna',
