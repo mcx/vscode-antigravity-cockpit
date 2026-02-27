@@ -12,7 +12,7 @@
         "zh-cn": {
           "title": "⚠️ 唤醒功能风险提示",
           "summary": "插件内唤醒有风控风险，建议优先改用 Cockpit Tools 桌面端（链路与官方客户端一致）。",
-          "content": "插件内唤醒有风控风险（Cloud Code 直连）。\n建议优先改用 Cockpit Tools 桌面端（链路与官方客户端一致）。\n\n插件内唤醒目前使用 Cloud Code 直连请求进行对话唤醒。近期 Google 对该类行为的风控有收紧趋势；理论上低频率唤醒大概率并不会触发风控，但是仍需要您知悉并自行评估风险。\n\nCockpit Tools 桌面端使用「本地网关 + 官方 Language Server 协议」（StartCascade / SendUserCascadeMessage / GetCascadeTrajectory / DeleteCascadeTrajectory）执行唤醒，链路与官方客户端保持一致，理论上风险更低、稳定性更高。\n同时支持账号批量验证（如 403 场景）与唤醒任务管理，并支持唤醒最新的 Gemini 3.1 Pro 相关模型。\n\n新版本唤醒能力仅支持 Cockpit Tools 桌面端 v0.9.0 及以上。\n点击下方按钮可前往 Cockpit Tools 下载页（推荐使用最新版）。\n\n建议优先改用 Cockpit Tools 桌面端。",
+          "content": "⚠️ 风险结论\n插件内唤醒有风控风险（Cloud Code 直连）。\n建议优先改用 Cockpit Tools 桌面端（链路与官方客户端一致）。\n\n☁️ 插件内唤醒链路\n插件内唤醒目前使用 Cloud Code 直连请求进行对话唤醒。近期 Google 对该类行为的风控有收紧趋势；理论上低频率唤醒大概率并不会触发风控，但是仍需要您知悉并自行评估风险。\n\n🛡️ 桌面端链路（与官方一致）\nCockpit Tools 桌面端使用「本地网关 + 官方 Language Server 协议」（StartCascade / SendUserCascadeMessage / GetCascadeTrajectory / DeleteCascadeTrajectory）执行唤醒，链路与官方客户端保持一致，理论上风险更低、稳定性更高。\n同时支持账号批量验证（如 403 场景）与唤醒任务管理，并支持唤醒最新的 Gemini 3.1 Pro 相关模型。\n\n🧩 版本要求\n新版本唤醒能力仅支持 Cockpit Tools 桌面端 v0.9.0 及以上。\n点击下方按钮可前往 Cockpit Tools 下载页（推荐使用最新版）。\n\n✅ 建议\n建议优先改用 Cockpit Tools 桌面端。",
           "actionLabel": "下载最新版"
         },
         "zh-tw": {
