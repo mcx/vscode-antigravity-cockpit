@@ -8,6 +8,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.27] - 2026-02-27
+
+### Changed
+- **Wake-up risk dialog flow simplified**: The risk dialog now uses a clear three-action flow: `Cancel` / `Continue with Plugin Wake-up` / `Open Cockpit Tools (Recommended)`.
+- **Open-or-download behavior**: `Open Cockpit Tools (Recommended)` now attempts to launch Cockpit Tools first and automatically opens the download page when the app is unavailable.
+- **Risk copy prioritizes conclusion**: Updated the Chinese risk warning copy to place the conclusion first and explicitly explain the low-frequency wake-up risk expectation.
+
+### Removed
+- **Anonymous error reporting removed completely**: Removed the entire error-reporting pipeline (runtime reporter module, capture hooks, settings entries, and build-time DSN injection).
+
+### i18n
+- **Locale sync for wake-up actions**: Added missing wake-up dialog action keys (`autoTrigger.openCockpitToolsRecommended`, `autoTrigger.continuePluginWakeup`) across all locale files.
+
+---
+
 ## [2.1.26] - 2026-02-26
 
 ### Changed

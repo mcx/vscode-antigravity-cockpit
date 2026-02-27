@@ -7,3 +7,6 @@ node_modules
 
 # Local environment variables (contains secrets like SENTRY_DSN)
 .env.local
+
+# Local agent rules (do not commit)
+/AGENTS.md

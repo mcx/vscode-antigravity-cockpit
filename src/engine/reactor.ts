@@ -18,8 +18,7 @@ import { logger } from '../shared/log_service';
 import { configService } from '../shared/config_service';
 import { t } from '../shared/i18n';
 import { TIMING, API_ENDPOINTS } from '../shared/constants';
-import { captureError } from '../shared/error_reporter';
-import { AntigravityError, isServerError } from '../shared/errors';
+import { AntigravityError } from '../shared/errors';
 import { cloudCodeClient, CloudCodeAuthError, CloudCodeRequestError } from '../shared/cloudcode_client';
 import { autoTriggerController } from '../auto_trigger/controller';
 import { oauthService, credentialStorage } from '../auto_trigger';
@@ -146,8 +145,6 @@ export class ReactorCore {
     private lastLocalFetchedAt?: number;
     /** 授权配额上次拉取时间 */
     private lastAuthorizedFetchedAt?: number;
-    /** 是否已经成功获取过配额数据（用于决定是否上报后续错误） */
-    private hasSuccessfulSync: boolean = false;
     /** 初始化同步重试标识，用于中断本地重试流程 */
     private initRetryToken: number = 0;
     /** 本地模式下的账户邮箱（从 state.vscdb 读取） */
@@ -453,21 +450,6 @@ export class ReactorCore {
             const endpointInfo = `endpoint=${endpoint}`;
             logger.error(`Init sync failed after ${maxRetries} retries (${sourceInfo}, ${endpointInfo}): ${err.message}`);
             
-            // 服务端返回的错误不上报（如"未登录"），这不属于插件 Bug
-            if (!isServerError(err)) {
-                captureError(err, {
-                    phase: 'initSync',
-                    retryCount: currentRetry,
-                    maxRetries,
-                    endpoint: API_ENDPOINTS.GET_USER_STATUS,
-                    host: '127.0.0.1',
-                    port: this.port,
-                    timeout_ms: TIMING.HTTP_TIMEOUT_MS,
-                    interval_ms: this.currentInterval,
-                    has_token: Boolean(this.token),
-                    scan: this.lastScanDiagnostics,
-                });
-            }
             if (this.errorHandler) {
                 this.errorHandler(err);
             }
@@ -537,20 +519,6 @@ export class ReactorCore {
                 : API_ENDPOINTS.GET_USER_STATUS;
             logger.error(`Telemetry Sync Failed (${sourceInfo}, current=${currentSource}, endpoint=${endpoint}): ${err.message}`);
             
-            // 只有在从未成功获取过配额时才上报，成功后的定时同步失败不上报
-            // 服务端返回的错误不上报（如"未登录"），这不属于插件 Bug
-            if (!this.hasSuccessfulSync && !isServerError(err)) {
-                captureError(err, {
-                    phase: 'telemetrySync',
-                    endpoint: API_ENDPOINTS.GET_USER_STATUS,
-                    host: '127.0.0.1',
-                    port: this.port,
-                    timeout_ms: TIMING.HTTP_TIMEOUT_MS,
-                    interval_ms: this.currentInterval,
-                    has_token: Boolean(this.token),
-                    scan: this.lastScanDiagnostics,
-                });
-            }
             if (this.errorHandler) {
                 this.errorHandler(err);
             }
@@ -733,9 +701,6 @@ export class ReactorCore {
         } else {
             logger.info('Quota Update: No models available');
         }
-
-        // 标记已成功获取过配额数据，后续定时同步失败不再上报
-        this.hasSuccessfulSync = true;
 
         if (this.updateHandler) {
             this.updateHandler(telemetry);

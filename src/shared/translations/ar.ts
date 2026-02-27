@@ -446,7 +446,9 @@ export const ar = {
     'autoTrigger.customPromptHint': 'الرسالة المرسلة للذكاء الاصطناعي للاستيقاظ، اترك فارغاً لاستخدام الافتراضي "hi".',
     'autoTrigger.maxOutputTokensLabel': 'الحد الأقصى لرموز الإخراج',
     'autoTrigger.maxOutputTokensHint': 'الافتراضي 0 (بلا حد). القيم الأكبر تعني ردوداً أطول واستهلاكاً أكبر للرموز.',
-    'autoTrigger.enableRiskWarning': '⚠️ تحذير من المخاطر\nبسبب تشديد ضوابط المخاطر لدى Google مؤخراً، قد يؤدي تفعيل ميزة التنبيه إلى زيادة احتمال تطبيق إجراءات ضبط المخاطر على الحساب (مثل تحقق إضافي أو قيود مؤقتة).\nفعّل الميزة فقط إذا كان هذا المستوى من المخاطر مقبولاً لحسابك.\n\nهل تريد المتابعة وتفعيل ميزة التنبيه؟',
+    'autoTrigger.enableRiskWarning': '⚠️ Risk warning\nPlugin wake-up has risk-control risk (Cloud Code direct calls).\nWe recommend using Cockpit Tools desktop first (same link path as the official client).\n\nPlugin wake-up currently uses Cloud Code direct calls for conversation wake-up. Google has recently tightened risk controls for this behavior. In theory, low-frequency wake-up is unlikely to trigger risk control, but you still need to understand and evaluate the risk yourself.\n\nCockpit Tools desktop uses "Local Gateway + Official Language Server Protocol" (StartCascade / SendUserCascadeMessage / GetCascadeTrajectory / DeleteCascadeTrajectory). The link is consistent with the official client, with theoretically lower risk and better stability.\nIt also supports batch account verification (such as 403 scenarios), wake-up task management, and the latest Gemini 3.1 Pro related models.\n\nNew wake-up capabilities require Cockpit Tools desktop v0.9.0 or later.\nClick "Open Cockpit Tools (Recommended)" to try launching desktop automatically; if not installed or version is below requirement, it will automatically redirect to the download page.\n\nContinue using plugin wake-up?\nWe recommend switching to Cockpit Tools desktop.',
+    'autoTrigger.openCockpitToolsRecommended': 'Open Cockpit Tools (Recommended)',
+    'autoTrigger.continuePluginWakeup': 'Continue with Plugin Wake-up',
 
     // Time Window Policy
     'autoTrigger.timeWindowEnabled': 'تفعيل سياسة النافذة الزمنية',

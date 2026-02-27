@@ -474,7 +474,9 @@ export const vi = {
     'autoTrigger.maxOutputTokensHint':
         'Mặc định 0 (không giới hạn). Giá trị lớn hơn nghĩa là phản hồi dài hơn và tiêu tốn nhiều token hơn.',
     'autoTrigger.enableRiskWarning':
-        '⚠️ Cảnh báo rủi ro\nDo cơ chế kiểm soát rủi ro của Google gần đây được siết chặt, việc bật tính năng đánh thức có thể làm tăng khả năng tài khoản bị áp dụng biện pháp kiểm soát rủi ro (bao gồm xác minh bổ sung hoặc hạn chế tạm thời).\nChỉ bật nếu bạn chấp nhận mức rủi ro này cho tài khoản của mình.\n\nTiếp tục bật tính năng đánh thức?',
+        '⚠️ Risk warning\nPlugin wake-up has risk-control risk (Cloud Code direct calls).\nWe recommend using Cockpit Tools desktop first (same link path as the official client).\n\nPlugin wake-up currently uses Cloud Code direct calls for conversation wake-up. Google has recently tightened risk controls for this behavior. In theory, low-frequency wake-up is unlikely to trigger risk control, but you still need to understand and evaluate the risk yourself.\n\nCockpit Tools desktop uses "Local Gateway + Official Language Server Protocol" (StartCascade / SendUserCascadeMessage / GetCascadeTrajectory / DeleteCascadeTrajectory). The link is consistent with the official client, with theoretically lower risk and better stability.\nIt also supports batch account verification (such as 403 scenarios), wake-up task management, and the latest Gemini 3.1 Pro related models.\n\nNew wake-up capabilities require Cockpit Tools desktop v0.9.0 or later.\nClick "Open Cockpit Tools (Recommended)" to try launching desktop automatically; if not installed or version is below requirement, it will automatically redirect to the download page.\n\nContinue using plugin wake-up?\nWe recommend switching to Cockpit Tools desktop.',
+    'autoTrigger.openCockpitToolsRecommended': 'Open Cockpit Tools (Recommended)',
+    'autoTrigger.continuePluginWakeup': 'Continue with Plugin Wake-up',
 
     // Chính sách cửa sổ thời gian
     'autoTrigger.timeWindowEnabled': 'Bật chính sách cửa sổ thời gian',

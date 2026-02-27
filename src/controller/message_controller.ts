@@ -165,13 +165,11 @@ export class MessageController {
                             }
                         }
 
-                        if (!handled) {
-                            // Local 模式或无活动账号，回落到原有逻辑
-                            this.reactor.syncTelemetry();
-                            if (this.refreshService) {
-                                this.refreshService.refresh();
-                            }
+                        if (!handled && this.refreshService) {
+                            this.refreshService.refresh();
                         }
+                        // 无论走哪条刷新路径，都同步主遥测，确保主面板离线卡可恢复
+                        await this.reactor.syncTelemetry();
 
                         const state = await autoTriggerController.getState();
                         this.hud.sendMessage({
@@ -679,17 +677,26 @@ export class MessageController {
                     {
                         const riskAction = message.riskAction === 'test' ? 'test' : 'enable';
                         const warningText = t('autoTrigger.enableRiskWarning');
-                        const confirmLabel = t('common.confirm') || 'Confirm';
+                        const openCockpitToolsAction: vscode.MessageItem = {
+                            title: t('autoTrigger.openCockpitToolsRecommended'),
+                        };
+                        const continuePluginWakeupAction: vscode.MessageItem = {
+                            title: t('autoTrigger.continuePluginWakeup'),
+                        };
                         const selection = await vscode.window.showWarningMessage(
                             warningText,
                             { modal: true },
-                            confirmLabel,
+                            openCockpitToolsAction,
+                            continuePluginWakeupAction,
                         );
+                        if (selection === openCockpitToolsAction) {
+                            await this.openCockpitToolsOrDownload();
+                        }
                         this.hud.sendMessage({
                             type: 'autoTriggerRiskConfirmResult',
                             data: {
                                 action: riskAction,
-                                confirmed: selection === confirmLabel,
+                                confirmed: selection === continuePluginWakeupAction,
                             },
                         });
                     }
@@ -1655,5 +1662,45 @@ export class MessageController {
                 t('antigravityToolsSync.switchFailed', { message: err }) || `切换失败: ${err}`,
             );
         }
+    }
+
+    private async openCockpitToolsOrDownload(): Promise<void> {
+        const platform = process.platform;
+        let command: string;
+
+        if (platform === 'darwin') {
+            command = 'open -a "Cockpit Tools"';
+        } else if (platform === 'win32') {
+            command = 'start "" "Cockpit Tools"';
+        } else {
+            command = 'cockpit-tools';
+        }
+
+        const opened = await new Promise<boolean>((resolve) => {
+            import('child_process')
+                .then(({ exec }) => {
+                    exec(command, (error) => {
+                        if (error) {
+                            logger.warn(`[AutoTriggerRisk] Failed to open Cockpit Tools, fallback to download: ${error.message}`);
+                            resolve(false);
+                            return;
+                        }
+                        resolve(true);
+                    });
+                })
+                .catch((error) => {
+                    logger.warn(`[AutoTriggerRisk] Failed to import child_process, fallback to download: ${String(error)}`);
+                    resolve(false);
+                });
+        });
+
+        if (!opened) {
+            await this.downloadCockpitTools();
+        }
+    }
+
+    private async downloadCockpitTools(): Promise<void> {
+        const cockpitToolsReleaseUrl = 'https://github.com/jlcodes99/antigravity-cockpit-tools/releases';
+        await vscode.env.openExternal(vscode.Uri.parse(cockpitToolsReleaseUrl));
     }
 }

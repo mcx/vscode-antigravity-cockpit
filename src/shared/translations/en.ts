@@ -454,7 +454,9 @@ export const en = {
     'autoTrigger.customPromptHint': 'Message sent to AI for wake-up, leave empty to use default "hi".',
     'autoTrigger.maxOutputTokensLabel': 'Max Output Tokens',
     'autoTrigger.maxOutputTokensHint': 'Default 0 (no limit). Larger values mean longer replies and more token consumption.',
-    'autoTrigger.enableRiskWarning': '⚠️ Risk warning\nDue to tighter Google risk controls recently, using wake-up features may increase the chance of account risk-control actions (including extra verification or temporary restrictions).\nPlease continue only if this risk is acceptable for your account.\n\nContinue?',
+    'autoTrigger.enableRiskWarning': '⚠️ Risk warning\nPlugin wake-up has risk-control risk (Cloud Code direct calls).\nWe recommend using Cockpit Tools desktop first (same link path as the official client).\n\nPlugin wake-up currently uses Cloud Code direct calls for conversation wake-up. Google has recently tightened risk controls for this behavior. In theory, low-frequency wake-up is unlikely to trigger risk control, but you still need to understand and evaluate the risk yourself.\n\nCockpit Tools desktop uses "Local Gateway + Official Language Server Protocol" (StartCascade / SendUserCascadeMessage / GetCascadeTrajectory / DeleteCascadeTrajectory). The link is consistent with the official client, with theoretically lower risk and better stability.\nIt also supports batch account verification (such as 403 scenarios), wake-up task management, and the latest Gemini 3.1 Pro related models.\n\nNew wake-up capabilities require Cockpit Tools desktop v0.9.0 or later.\nClick "Open Cockpit Tools (Recommended)" to try launching desktop automatically; if not installed or version is below requirement, it will automatically redirect to the download page.\n\nContinue using plugin wake-up?\nWe recommend switching to Cockpit Tools desktop.',
+    'autoTrigger.openCockpitToolsRecommended': 'Open Cockpit Tools (Recommended)',
+    'autoTrigger.continuePluginWakeup': 'Continue with Plugin Wake-up',
 
     // Time Window Policy
     'autoTrigger.timeWindowEnabled': 'Enable Time Window Policy',
