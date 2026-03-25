@@ -684,13 +684,14 @@ body {
 }
 
 .card-action-btn {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border-radius: 999px;
     border: none;
     background: transparent;
     color: var(--text-secondary);
     cursor: pointer;
+    position: relative;
 }
 
 .card-action-btn:hover {
@@ -810,13 +811,14 @@ body {
 }
 
 .action-btn {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     border-radius: 10px;
     border: none;
     background: rgba(148, 163, 184, 0.1);
     color: var(--text-secondary);
     cursor: pointer;
+    position: relative;
 }
 
 .action-btn:hover {
@@ -832,6 +834,37 @@ body {
 .action-btn.danger:hover {
     background: rgba(239, 68, 68, 0.2);
     color: var(--danger);
+}
+
+.card-action-btn[data-tooltip]::after,
+.action-btn[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 50%;
+    top: calc(100% + 6px);
+    transform: translateX(-50%);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    padding: 0;
+    border-radius: 0;
+    font-size: 11px;
+    line-height: 1.2;
+    white-space: nowrap;
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    z-index: 120;
+    transition: none;
+}
+
+.card-action-btn[data-tooltip]:hover::after,
+.card-action-btn[data-tooltip]:focus-visible::after,
+.action-btn[data-tooltip]:hover::after,
+.action-btn[data-tooltip]:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
 }
 
 /* Sticky action column */

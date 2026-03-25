@@ -8,6 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.33] - 2026-03-25
+
+### Improved
+- **Accounts Overview action tooltips are now consistent**: Replaced native `title` tooltips on account action icons (`Details` / `Switch` / `Refresh` / `Export` / `Delete`) with webview-rendered tooltips to avoid inconsistent hover-trigger timing in VS Code webviews.
+- **Action hit area enlarged**: Increased action button size in both card and list views to improve hover stability and clickability.
+- **Refresh icon visual tweak**: Updated the Accounts Overview refresh action glyph from `⟳` to `↻` for better visual balance with neighboring action icons.
+
+---
+
 ## [2.1.32] - 2026-03-21
 
 ### Fixed

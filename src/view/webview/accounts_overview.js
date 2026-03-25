@@ -481,6 +481,11 @@
         const isSelected = selected.has(account.email);
         const toolsStatus = toolsConnected ? 'Online' : 'Offline';
         const toolsClass = toolsConnected ? 'bound' : 'unbound';
+        const detailsLabel = escapeHtml(getString('details', 'Details'));
+        const switchLabel = escapeHtml(getString('switch', 'Switch'));
+        const refreshLabel = escapeHtml(getString('refresh', 'Refresh'));
+        const exportLabel = escapeHtml(getString('export', 'Export'));
+        const deleteLabel = escapeHtml(getString('delete', 'Delete'));
 
         return `
             <div class="account-card ${isCurrent ? 'current' : ''} ${isSelected ? 'selected' : ''}" data-email="${escapeHtml(account.email)}">
@@ -503,11 +508,11 @@
                         <span class="fingerprint-pill ${toolsClass}">🔗 Tools: ${toolsStatus}</span>
                     </div>
                     <div class="card-actions">
-                        <button class="card-action-btn" data-action="details" data-email="${escapeHtml(account.email)}" title="${escapeHtml(getString('details', 'Details'))}">ℹ️</button>
-                        ${isCurrent ? '' : `<button class="card-action-btn success" data-action="switch" data-email="${escapeHtml(account.email)}" title="${escapeHtml(getString('switch', 'Switch'))}">▶</button>`}
-                        <button class="card-action-btn" data-action="refresh" data-email="${escapeHtml(account.email)}" title="${escapeHtml(getString('refresh', 'Refresh'))}">⟳</button>
-                        <button class="card-action-btn export-btn" data-action="export" data-email="${escapeHtml(account.email)}" title="${escapeHtml(getString('export', 'Export'))}">⤴</button>
-                        <button class="card-action-btn danger" data-action="delete" data-email="${escapeHtml(account.email)}" title="${escapeHtml(getString('delete', 'Delete'))}">🗑</button>
+                        <button class="card-action-btn" data-action="details" data-email="${escapeHtml(account.email)}" data-tooltip="${detailsLabel}" aria-label="${detailsLabel}">ℹ️</button>
+                        ${isCurrent ? '' : `<button class="card-action-btn success" data-action="switch" data-email="${escapeHtml(account.email)}" data-tooltip="${switchLabel}" aria-label="${switchLabel}">▶</button>`}
+                        <button class="card-action-btn" data-action="refresh" data-email="${escapeHtml(account.email)}" data-tooltip="${refreshLabel}" aria-label="${refreshLabel}">↻</button>
+                        <button class="card-action-btn export-btn" data-action="export" data-email="${escapeHtml(account.email)}" data-tooltip="${exportLabel}" aria-label="${exportLabel}">⤴</button>
+                        <button class="card-action-btn danger" data-action="delete" data-email="${escapeHtml(account.email)}" data-tooltip="${deleteLabel}" aria-label="${deleteLabel}">🗑</button>
                     </div>
                 </div>
             </div>
@@ -522,6 +527,10 @@
         const isSelected = selected.has(account.email);
         const toolsStatus = toolsConnected ? 'Online' : 'Offline';
         const toolsClass = toolsConnected ? 'bound' : 'unbound';
+        const detailsLabel = escapeHtml(getString('details', 'Details'));
+        const switchLabel = escapeHtml(getString('switch', 'Switch'));
+        const refreshLabel = escapeHtml(getString('refresh', 'Refresh'));
+        const deleteLabel = escapeHtml(getString('delete', 'Delete'));
 
         const quotaContent = account.loading
             ? `<span class="quota-empty">${escapeHtml(getString('loading', 'Loading...'))}</span>`
@@ -553,10 +562,10 @@
                 </td>
                 <td class="sticky-action-cell table-action-cell">
                     <div class="action-buttons">
-                        <button class="action-btn" data-action="details" data-email="${escapeHtml(account.email)}" title="${escapeHtml(getString('details', 'Details'))}">ℹ️</button>
-                        ${isCurrent ? '' : `<button class="action-btn success" data-action="switch" data-email="${escapeHtml(account.email)}" title="${escapeHtml(getString('switch', 'Switch'))}">▶</button>`}
-                        <button class="action-btn" data-action="refresh" data-email="${escapeHtml(account.email)}" title="${escapeHtml(getString('refresh', 'Refresh'))}">⟳</button>
-                        <button class="action-btn danger" data-action="delete" data-email="${escapeHtml(account.email)}" title="${escapeHtml(getString('delete', 'Delete'))}">🗑</button>
+                        <button class="action-btn" data-action="details" data-email="${escapeHtml(account.email)}" data-tooltip="${detailsLabel}" aria-label="${detailsLabel}">ℹ️</button>
+                        ${isCurrent ? '' : `<button class="action-btn success" data-action="switch" data-email="${escapeHtml(account.email)}" data-tooltip="${switchLabel}" aria-label="${switchLabel}">▶</button>`}
+                        <button class="action-btn" data-action="refresh" data-email="${escapeHtml(account.email)}" data-tooltip="${refreshLabel}" aria-label="${refreshLabel}">↻</button>
+                        <button class="action-btn danger" data-action="delete" data-email="${escapeHtml(account.email)}" data-tooltip="${deleteLabel}" aria-label="${deleteLabel}">🗑</button>
                     </div>
                 </td>
             </tr>
