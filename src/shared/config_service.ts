@@ -103,6 +103,27 @@ class ConfigService {
         await this.migrateDeprecatedModelPreferences();
         await this.cleanupLegacySettings();
         await this.ensureAuthorizedQuotaSource();
+        await this.migrateAutoSwitchDefault();
+    }
+
+    /**
+     * v2.1.37: 旧版本默认 autoSwitch=true，升级后需要一次性重置为 false
+     */
+    private async migrateAutoSwitchDefault(): Promise<void> {
+        if (!this.globalState) {
+            return;
+        }
+        const migrationKey = `${ConfigService.stateKeyPrefix}.migratedAutoSwitchOff.v2137`;
+        if (this.globalState.get<boolean>(migrationKey, false)) {
+            return;
+        }
+        const stateKey = this.buildStateKey('antigravityToolsAutoSwitchEnabled');
+        const current = this.globalState.get<boolean>(stateKey);
+        if (current === true) {
+            await this.globalState.update(stateKey, false);
+            logger.info('[ConfigService] Migrated antigravityToolsAutoSwitchEnabled from true to false (v2.1.37 default change)');
+        }
+        await this.globalState.update(migrationKey, true);
     }
 
     private async ensureAuthorizedQuotaSource(): Promise<void> {

@@ -10,6 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.1.38] - 2026-03-29
+
+### Fixed
+- **Auto-switch stays enabled after upgrade**: Users upgrading from ≤2.1.36 could see the auto-switch toggle still checked because the old default (`true`) was persisted in VS Code global state. A one-time migration now resets the stored flag to `false`.
+
 ## [2.1.37] - 2026-03-29
 
 ### Added
