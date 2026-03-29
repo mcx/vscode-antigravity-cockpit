@@ -100,7 +100,7 @@ export class TelemetryController {
                 groupMappings: config.groupMappings,
                 language: config.language,
                 antigravityToolsSyncEnabled: configService.getStateFlag('antigravityToolsSyncEnabled', false),
-                antigravityToolsAutoSwitchEnabled: configService.getStateFlag('antigravityToolsAutoSwitchEnabled', true),
+                antigravityToolsAutoSwitchEnabled: configService.getStateFlag('antigravityToolsAutoSwitchEnabled', false),
             });
 
             const snapshotEmail = snapshot.userInfo?.email;

@@ -38,7 +38,7 @@
     let availableAccounts = [];
     let activeAccountEmail = '';
     let antigravityToolsSyncEnabled = false;
-    let antigravityToolsAutoSwitchEnabled = true;
+    let antigravityToolsAutoSwitchEnabled = false;
     let testSelectedModels = [];
     let testSelectedAccounts = [];
     let riskConfirmPending = false;

@@ -10,6 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.1.37] - 2026-03-29
+
+### Added
+- **Auto-switch toggle in Settings modal**: The auto-switch checkbox is now accessible from the ⚙️ Settings modal (alongside notification and threshold settings), in addition to the existing Account Sync config modal.
+
+### Changed
+- **Auto-switch default changed to OFF**: The automatic account switching feature now defaults to disabled. Users must explicitly enable it in settings.
+
 ## [2.1.36] - 2026-03-28
 
 ### Added

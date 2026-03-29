@@ -639,7 +639,7 @@ export class MessageController {
                     if (typeof message.enabled === 'boolean') {
                         // Auto sync has been deprecated and is now fixed OFF.
                         await configService.setStateFlag('antigravityToolsSyncEnabled', false);
-                        const autoSwitchEnabled = configService.getStateFlag('antigravityToolsAutoSwitchEnabled', true);
+                        const autoSwitchEnabled = configService.getStateFlag('antigravityToolsAutoSwitchEnabled', false);
                         this.hud.sendMessage({
                             type: 'antigravityToolsSyncStatus',
                             data: { autoSyncEnabled: false, autoSwitchEnabled },
@@ -1450,7 +1450,7 @@ export class MessageController {
     private async handleAntigravityToolsImport(isAuto: boolean): Promise<void> {
         try {
             const autoSyncEnabled = configService.getStateFlag('antigravityToolsSyncEnabled', false);
-            const autoSwitchEnabled = configService.getStateFlag('antigravityToolsAutoSwitchEnabled', true);
+            const autoSwitchEnabled = configService.getStateFlag('antigravityToolsAutoSwitchEnabled', false);
             if (isAuto && !autoSyncEnabled && !autoSwitchEnabled) {
                 return;
             }

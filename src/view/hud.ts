@@ -263,7 +263,7 @@ export class CockpitHUD {
             groupMappings: config.groupMappings,
             language: config.language,
             antigravityToolsSyncEnabled: false,
-            antigravityToolsAutoSwitchEnabled: configService.getStateFlag('antigravityToolsAutoSwitchEnabled', true),
+            antigravityToolsAutoSwitchEnabled: configService.getStateFlag('antigravityToolsAutoSwitchEnabled', false),
         });
     }
 
@@ -1446,6 +1446,17 @@ export class CockpitHUD {
                         <span class="range-hint">(1-50)</span>
                     </div>
                     <p class="setting-hint">${t('threshold.criticalHint')}</p>
+                </div>
+
+                <hr class="setting-divider">
+
+                <!-- 自动切号 -->
+                <div class="setting-item">
+                    <label for="dashboard-auto-switch-checkbox" class="checkbox-label">
+                        <input type="checkbox" id="dashboard-auto-switch-checkbox">
+                        <span>🔄 ${t('atSyncConfig.autoSwitchTitle') || '自动切换'}</span>
+                    </label>
+                    <p class="setting-hint">${t('atSyncConfig.autoSwitchDesc') || '启用后优先切换到 Antigravity Tools 当前账号；不可用则跟随本地客户端账号（仅授权模式生效）。'}</p>
                 </div>
 
                 <hr class="setting-divider">
