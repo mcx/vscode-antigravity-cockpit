@@ -10,6 +10,11 @@
 
 ## [未发布]
 
+## [2.1.39] - 2026-03-30
+
+### 修复
+- **WSL / SSH 远程环境下扩展崩溃**：`process.resourcesPath` 是 Electron 专有全局变量，在 WSL、SSH 等远程 Node.js 扩展宿主中为 `undefined`。原代码在模块加载阶段执行 `path.join(process.resourcesPath, …)` 直接抛出 `TypeError`，导致扩展在 `activate()` 执行之前就崩溃。现已改为惰性求值并安全兜底，扩展可在所有远程环境下正常加载。
+
 ## [2.1.38] - 2026-03-29
 
 ### 修复

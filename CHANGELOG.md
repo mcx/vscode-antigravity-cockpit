@@ -10,6 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.1.39] - 2026-03-30
+
+### Fixed
+- **Extension crash in WSL / SSH remote environments**: `process.resourcesPath` is an Electron-only global that is `undefined` in remote Node.js extension hosts (WSL, SSH, etc.). The module-level `path.join(process.resourcesPath, …)` call threw a `TypeError` before `activate()` could even run. The path is now lazily resolved with a safe fallback, so the extension loads normally in all remote environments.
+
 ## [2.1.38] - 2026-03-29
 
 ### Fixed
