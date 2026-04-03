@@ -10,6 +10,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.1.41] - 2026-04-03
+
+### Changed
+- **Auto grouping unified to smart family rules**: First-run grouping and manual `Auto Group` now use the same smart family matcher and persist canonical group names (`Claude`, `Gemini Pro`, `Gemini Flash`, `Gemini Image`) together with group mappings.
+- **Antigravity Tools auto import behavior simplified**: In auto mode, Antigravity Tools sync now performs import-only and no longer switches active accounts automatically.
+
+### Removed
+- **Auto-switch account feature set removed**: Removed auto-switch threshold config/command, dashboard/auth modal auto-switch toggles, and refresh-time auto-switch execution path.
+- **Auto-switch helper module and tests removed**: Deleted `account_auto_switch` service and its test coverage.
+
 ## [2.1.40] - 2026-04-01
 
 ### Added

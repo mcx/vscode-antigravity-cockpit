@@ -73,7 +73,6 @@ export const CONFIG_KEYS = {
     GROUP_MAPPINGS: 'groupMappings',
     WARNING_THRESHOLD: 'warningThreshold',
     CRITICAL_THRESHOLD: 'criticalThreshold',
-    AUTO_SWITCH_THRESHOLD: 'autoSwitchThreshold',
     QUOTA_SOURCE: 'quotaSource',
     DISPLAY_MODE: 'displayMode',
     PROFILE_HIDDEN: 'profileHidden',

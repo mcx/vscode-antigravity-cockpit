@@ -9,7 +9,6 @@ import { QuotaSnapshot } from '../shared/types';
 import { t } from '../shared/i18n';
 import { recordQuotaHistory } from './quota_history';
 import { QuotaRefreshManager } from './quotaRefreshManager';
-import { getAccountRemainingPercentage, selectAutoSwitchTarget, type AutoSwitchCandidate } from './account_auto_switch';
 import { accountSwitchService } from './accountSwitchService';
 
 export interface AccountQuotaCache {
@@ -49,7 +48,6 @@ export class AccountsRefreshService {
     private isRefreshingQuotas = false;
     private refreshInFlight: Promise<void> | null = null;
     private startupRefreshPromise: Promise<void> | null = null;
-    private autoSwitchInProgress = false;
 
     private readonly onDidUpdateEmitter = new vscode.EventEmitter<void>();
     readonly onDidUpdate = this.onDidUpdateEmitter.event;
@@ -247,7 +245,6 @@ export class AccountsRefreshService {
                         }
                     }
                     this.emitUpdate();
-                    await this.maybeAutoSwitchAccount(reason);
                 } else {
                     logger.info('[AccountsRefresh] 跳过配额刷新 (skipQuotaRefresh=true)');
                 }
@@ -334,7 +331,6 @@ export class AccountsRefreshService {
             }
             
             this.emitUpdate();
-            await this.maybeAutoSwitchAccount('autoRefresh');
         } finally {
             this.isRefreshingQuotas = false;
         }
@@ -355,118 +351,6 @@ export class AccountsRefreshService {
     private isForbiddenError(error: string): boolean {
         const normalized = error.toLowerCase();
         return normalized.includes('403') || normalized.includes('forbidden');
-    }
-
-    private resolveAccountKey(email: string): string | null {
-        const normalized = email.trim().toLowerCase();
-        if (!normalized) {
-            return null;
-        }
-
-        for (const key of this.accounts.keys()) {
-            if (key.trim().toLowerCase() === normalized) {
-                return key;
-            }
-        }
-
-        return null;
-    }
-
-    private async maybeAutoSwitchAccount(reason: string, triggerEmail?: string): Promise<void> {
-        if (this.autoSwitchInProgress) {
-            return;
-        }
-
-        const threshold = configService.getConfig().autoSwitchThreshold ?? 0;
-        if (threshold <= 0) {
-            return;
-        }
-
-        const fallbackActiveEmail = await credentialStorage.getActiveAccount();
-        const requestedEmail = triggerEmail ?? this.currentEmail ?? fallbackActiveEmail;
-        const currentEmail = requestedEmail ? (this.resolveAccountKey(requestedEmail) ?? requestedEmail) : null;
-        if (!currentEmail) {
-            return;
-        }
-
-        if (triggerEmail && currentEmail.trim().toLowerCase() !== triggerEmail.trim().toLowerCase()) {
-            return;
-        }
-
-        const currentAccount = this.accounts.get(currentEmail);
-        if (!currentAccount || !currentAccount.hasPluginCredential || currentAccount.isInvalid || currentAccount.isForbidden) {
-            return;
-        }
-
-        const currentRemaining = getAccountRemainingPercentage(this.quotaCache.get(currentEmail)?.snapshot);
-        if (currentRemaining === null) {
-            return;
-        }
-
-        const candidates: AutoSwitchCandidate[] = [];
-        for (const [email, account] of this.accounts) {
-            const normalizedEmail = this.resolveAccountKey(email) ?? email;
-            if (normalizedEmail.trim().toLowerCase() === currentEmail.trim().toLowerCase()) {
-                continue;
-            }
-            if (!account.hasPluginCredential || account.isInvalid || account.isForbidden) {
-                continue;
-            }
-
-            const remainingPercentage = getAccountRemainingPercentage(this.quotaCache.get(email)?.snapshot);
-            if (remainingPercentage === null) {
-                continue;
-            }
-
-            candidates.push({
-                email: normalizedEmail,
-                remainingPercentage,
-            });
-        }
-
-        const target = selectAutoSwitchTarget({
-            currentEmail,
-            currentRemainingPercentage: currentRemaining,
-            threshold,
-            candidates,
-        });
-
-        if (!target) {
-            logger.debug(`[AccountsRefresh] No auto-switch target for ${currentEmail} at ${currentRemaining}% (threshold: ${threshold}%, reason: ${reason})`);
-            return;
-        }
-
-        this.autoSwitchInProgress = true;
-        try {
-            logger.info(
-                `[AccountsRefresh] Auto-switching from ${currentEmail} (${Math.round(currentRemaining)}%) to ${target.email} (${Math.round(target.remainingPercentage)}%) (threshold: ${threshold}%, reason: ${reason})`,
-            );
-
-            const switchResult = await accountSwitchService.switchAccount(target.email);
-            if (!switchResult.success) {
-                if (switchResult.mode === 'default' && switchResult.errorCode === 'tools_offline') {
-                    logger.warn('[AccountsRefresh] Tools offline during auto-switch, fallback to local active account switch');
-                    await credentialStorage.setActiveAccount(target.email);
-                } else {
-                    logger.warn(`[AccountsRefresh] Auto-switch failed for ${target.email}: ${switchResult.message || 'unknown error'}`);
-                    return;
-                }
-            }
-
-            const switchedEmail = switchResult.email ?? target.email;
-            await this.loadAccountsFromPluginStorage();
-            void this.reactor.syncTelemetry();
-            if (accountSwitchService.isSeamlessMode(switchResult.mode)) {
-                vscode.window.showInformationMessage(`已无感切换到账号：${switchedEmail}`);
-            } else {
-                vscode.window.showInformationMessage(t('ws.accountSwitched', { email: switchedEmail }));
-            }
-        } catch (error) {
-            const err = error instanceof Error ? error.message : String(error);
-            logger.warn(`[AccountsRefresh] Auto-switch failed for ${currentEmail}: ${err}`);
-        } finally {
-            this.autoSwitchInProgress = false;
-        }
     }
 
     /**
@@ -525,7 +409,6 @@ export class AccountsRefreshService {
 
         this.quotaCache.set(email, cache);
         this.emitUpdate();
-        await this.maybeAutoSwitchAccount('manualSingle', email);
     }
 
     async getAccountId(email: string): Promise<string | null> {

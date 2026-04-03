@@ -49,11 +49,15 @@ export class TelemetryController {
 
             // 首次安装分组默认启用时，自动生成分组映射并重新渲染
             if (config.groupingEnabled && Object.keys(config.groupMappings).length === 0 && snapshot.models.length > 0) {
-                const newMappings = ReactorCore.calculateGroupMappings(snapshot.models);
-                await configService.updateGroupMappings(newMappings);
-                logger.info(`Auto-grouped on first run: ${Object.keys(newMappings).length} models`);
-                this.reactor.reprocess();
-                return;
+                const autoGrouping = ReactorCore.calculateSmartGrouping(snapshot.models);
+                if (Object.keys(autoGrouping.groupMappings).length > 0) {
+                    await configService.updateGroupMappings(autoGrouping.groupMappings);
+                    await configService.updateConfig('groupingCustomNames', autoGrouping.groupNames);
+                    logger.info(`Auto-grouped on first run: ${Object.keys(autoGrouping.groupMappings).length} models`);
+                    this.reactor.reprocess();
+                    return;
+                }
+                logger.debug('Auto-group on first run skipped: no models matched smart-group families');
             }
 
             // 自动将新分组添加到 pinnedGroups（第一次开启分组时默认全部显示在状态栏）
@@ -100,7 +104,6 @@ export class TelemetryController {
                 groupMappings: config.groupMappings,
                 language: config.language,
                 antigravityToolsSyncEnabled: configService.getStateFlag('antigravityToolsSyncEnabled', false),
-                antigravityToolsAutoSwitchEnabled: configService.getStateFlag('antigravityToolsAutoSwitchEnabled', false),
             });
 
             const snapshotEmail = snapshot.userInfo?.email;

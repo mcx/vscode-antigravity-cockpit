@@ -38,7 +38,6 @@
     let availableAccounts = [];
     let activeAccountEmail = '';
     let antigravityToolsSyncEnabled = false;
-    let antigravityToolsAutoSwitchEnabled = false;
     let testSelectedModels = [];
     let testSelectedAccounts = [];
     let riskConfirmPending = false;
@@ -78,22 +77,12 @@
     function setAntigravityToolsSyncEnabled(_enabled) {
         antigravityToolsSyncEnabled = false;
         if (authUi) {
-            authUi.updateState(currentState?.authorization, false, antigravityToolsAutoSwitchEnabled);
+            authUi.updateState(currentState?.authorization, false);
         } else {
             const checkbox = document.getElementById('at-antigravityTools-sync-checkbox');
             if (checkbox) {
                 checkbox.checked = false;
             }
-        }
-    }
-
-    function setAntigravityToolsAutoSwitchEnabled(enabled) {
-        if (typeof enabled !== 'boolean') {
-            return;
-        }
-        antigravityToolsAutoSwitchEnabled = enabled;
-        if (authUi) {
-            authUi.updateState(currentState?.authorization, antigravityToolsSyncEnabled, enabled);
         }
     }
 
@@ -1521,7 +1510,7 @@
         const isAuthorized = hasAccounts || auth?.isAuthorized;
 
         if (authUi) {
-            authUi.updateState(auth, antigravityToolsSyncEnabled, antigravityToolsAutoSwitchEnabled);
+            authUi.updateState(auth, antigravityToolsSyncEnabled);
             authUi.renderAuthRow(authRow, { showSyncToggleInline: false });
         } else {
             const activeAccount = auth?.activeAccount;
@@ -1766,9 +1755,6 @@
                 if (message.config?.antigravityToolsSyncEnabled !== undefined) {
                     setAntigravityToolsSyncEnabled(Boolean(message.config.antigravityToolsSyncEnabled));
                 }
-                if (message.config?.antigravityToolsAutoSwitchEnabled !== undefined) {
-                    setAntigravityToolsAutoSwitchEnabled(Boolean(message.config.antigravityToolsAutoSwitchEnabled));
-                }
                 break;
             case 'antigravityToolsSyncStatus':
                 if (message.data?.enabled !== undefined) {
@@ -1776,9 +1762,6 @@
                 }
                 if (message.data?.autoSyncEnabled !== undefined) {
                     setAntigravityToolsSyncEnabled(Boolean(message.data.autoSyncEnabled));
-                }
-                if (message.data?.autoSwitchEnabled !== undefined) {
-                    setAntigravityToolsAutoSwitchEnabled(Boolean(message.data.autoSwitchEnabled));
                 }
                 break;
             case 'autoTriggerRiskConfirmResult':

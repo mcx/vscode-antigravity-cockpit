@@ -15,20 +15,16 @@
             this.vscode = vscodeApi;
             this.state = {
                 authorization: null,
-                antigravityToolsSyncEnabled: false,
-                antigravityToolsAutoSwitchEnabled: false
+                antigravityToolsSyncEnabled: false
             };
             this.elements = {};
         }
 
-        updateState(authorization, antigravityToolsSyncEnabled, antigravityToolsAutoSwitchEnabled) {
+        updateState(authorization, antigravityToolsSyncEnabled) {
             this.state.authorization = authorization;
             if (antigravityToolsSyncEnabled !== undefined) {
                 // Auto sync is intentionally forced off in UI.
                 this.state.antigravityToolsSyncEnabled = false;
-            }
-            if (antigravityToolsAutoSwitchEnabled !== undefined) {
-                this.state.antigravityToolsAutoSwitchEnabled = antigravityToolsAutoSwitchEnabled;
             }
         }
 
@@ -351,16 +347,6 @@
                                 </details>
                         </div>
                             <div class="at-sync-section">
-                                <div class="at-sync-section-title">🔄 ${t('atSyncConfig.autoSwitchTitle') || '自动切换'}</div>
-                                <div class="at-sync-toggle-row" style="display: flex; align-items: center; gap: 10px; padding: 8px 0;">
-                                    <label class="at-sync-toggle-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1;">
-                                        <input type="checkbox" id="at-sync-auto-switch-checkbox" class="at-sync-checkbox" />
-                                        <span>${t('atSyncConfig.enableAutoSwitch') || '自动切换账户'}</span>
-                                    </label>
-                                </div>
-                                <div class="at-sync-description" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">${t('atSyncConfig.autoSwitchDesc') || '启用后优先切换到 Antigravity Tools 当前账号；不可用则跟随本地客户端账号（仅授权模式生效）。'}</div>
-                            </div>
-                            <div class="at-sync-section">
                                 <div class="at-sync-section-title">📥 ${t('atSyncConfig.manualImportTitle') || '手动导入'}</div>
                                 <div class="at-sync-import-actions">
                                     <button id="at-sync-modal-import-local-btn" class="at-btn at-btn-primary at-sync-import-btn">${t('atSyncConfig.importLocal') || '导入本地账户'}</button>
@@ -383,19 +369,6 @@
                     this.vscode.postMessage({ command: 'antigravityToolsSync.import' });
                     modal.classList.add('hidden');
                 });
-
-                // 自动切号开关事件
-                modal.querySelector('#at-sync-auto-switch-checkbox')?.addEventListener('change', (e) => {
-                    const checked = e.target.checked;
-                    this.state.antigravityToolsAutoSwitchEnabled = checked;
-                    this.vscode.postMessage({ command: 'antigravityToolsSync.toggleAutoSwitch', enabled: checked });
-                });
-            }
-
-            // 刷新自动切号开关状态
-            const autoSwitchCheckbox = modal.querySelector('#at-sync-auto-switch-checkbox');
-            if (autoSwitchCheckbox) {
-                autoSwitchCheckbox.checked = this.state.antigravityToolsAutoSwitchEnabled;
             }
 
             modal.querySelectorAll('.at-sync-details').forEach((detail) => {

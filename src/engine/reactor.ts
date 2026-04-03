@@ -118,6 +118,66 @@ const AUTO_GROUP_GEMINI_IMAGE_ID_SET = new Set(
     ].map(id => id.toLowerCase()),
 );
 
+const AUTO_GROUP_FAMILY_DISPLAY_NAMES: Record<AutoGroupFamily, string> = {
+    claude: 'Claude',
+    gemini_pro: 'Gemini Pro',
+    gemini_flash: 'Gemini Flash',
+    gemini_image: 'Gemini Image',
+};
+
+const AUTO_GROUP_FAMILY_ORDER: AutoGroupFamily[] = ['claude', 'gemini_pro', 'gemini_flash', 'gemini_image'];
+
+function normalizeAutoGroupMatchText(value: string | undefined): string {
+    return (value || '')
+        .toLowerCase()
+        .replace(/[_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function resolveAutoGroupFamily(modelId: string, label?: string): AutoGroupFamily | null {
+    const normalizedId = modelId.trim().toLowerCase();
+    if (!normalizedId) {
+        return null;
+    }
+    const normalizedLabel = normalizeAutoGroupMatchText(label || modelId);
+
+    if (
+        AUTO_GROUP_GEMINI_IMAGE_ID_SET.has(normalizedId)
+        || AUTO_GROUP_GEMINI_IMAGE_ID_PATTERN.test(normalizedId)
+        || AUTO_GROUP_GEMINI_IMAGE_LABEL_PATTERN.test(normalizedLabel)
+    ) {
+        return 'gemini_image';
+    }
+
+    if (
+        AUTO_GROUP_GEMINI_PRO_ID_SET.has(normalizedId)
+        || AUTO_GROUP_GEMINI_PRO_ID_PATTERN.test(normalizedId)
+        || AUTO_GROUP_GEMINI_PRO_LABEL_PATTERN.test(normalizedLabel)
+    ) {
+        return 'gemini_pro';
+    }
+
+    if (
+        AUTO_GROUP_GEMINI_FLASH_ID_SET.has(normalizedId)
+        || AUTO_GROUP_GEMINI_FLASH_ID_PATTERN.test(normalizedId)
+        || AUTO_GROUP_GEMINI_FLASH_LABEL_PATTERN.test(normalizedLabel)
+    ) {
+        return 'gemini_flash';
+    }
+
+    if (
+        AUTO_GROUP_CLAUDE_ID_SET.has(normalizedId)
+        || normalizedId.startsWith('claude-')
+        || normalizedId.startsWith('model_claude')
+        || normalizedLabel.startsWith('claude ')
+    ) {
+        return 'claude';
+    }
+
+    return null;
+}
+
 
 /**
  * 反应堆核心类
@@ -789,55 +849,8 @@ export class ReactorCore {
         return normalized ? normalized : null;
     }
 
-    private normalizeAutoGroupMatchText(value: string | undefined): string {
-        return (value || '')
-            .toLowerCase()
-            .replace(/[_-]+/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-    }
-
     private resolveAutoGroupFamily(modelId: string, label?: string): AutoGroupFamily | null {
-        const normalizedId = modelId.trim().toLowerCase();
-        if (!normalizedId) {
-            return null;
-        }
-        const normalizedLabel = this.normalizeAutoGroupMatchText(label || modelId);
-
-        if (
-            AUTO_GROUP_GEMINI_IMAGE_ID_SET.has(normalizedId)
-            || AUTO_GROUP_GEMINI_IMAGE_ID_PATTERN.test(normalizedId)
-            || AUTO_GROUP_GEMINI_IMAGE_LABEL_PATTERN.test(normalizedLabel)
-        ) {
-            return 'gemini_image';
-        }
-
-        if (
-            AUTO_GROUP_GEMINI_PRO_ID_SET.has(normalizedId)
-            || AUTO_GROUP_GEMINI_PRO_ID_PATTERN.test(normalizedId)
-            || AUTO_GROUP_GEMINI_PRO_LABEL_PATTERN.test(normalizedLabel)
-        ) {
-            return 'gemini_pro';
-        }
-
-        if (
-            AUTO_GROUP_GEMINI_FLASH_ID_SET.has(normalizedId)
-            || AUTO_GROUP_GEMINI_FLASH_ID_PATTERN.test(normalizedId)
-            || AUTO_GROUP_GEMINI_FLASH_LABEL_PATTERN.test(normalizedLabel)
-        ) {
-            return 'gemini_flash';
-        }
-
-        if (
-            AUTO_GROUP_CLAUDE_ID_SET.has(normalizedId)
-            || normalizedId.startsWith('claude-')
-            || normalizedId.startsWith('model_claude')
-            || normalizedLabel.startsWith('claude ')
-        ) {
-            return 'claude';
-        }
-
-        return null;
+        return resolveAutoGroupFamily(modelId, label);
     }
 
     private buildAutoFamilyGroupMap(groupMappings: Record<string, string>): Partial<Record<AutoGroupFamily, string>> {
@@ -1821,130 +1834,55 @@ export class ReactorCore {
     }
 
     /**
-     * 根据当前配额信息计算分组映射
-     * 返回 modelId -> groupId 的映射
+     * 计算“自动分组”同款分组结果（家族匹配 + 固定组名）
      */
-    static calculateGroupMappings(models: ModelQuotaInfo[]): Record<string, string> {
-        // 1. 尝试按配额状态分组（旧逻辑）
-        const statsMap = new Map<string, string[]>();
+    static calculateSmartGrouping(models: ModelQuotaInfo[]): {
+        groupMappings: Record<string, string>;
+        groupNames: Record<string, string>;
+    } {
+        const familyBuckets = new Map<AutoGroupFamily, string[]>();
         for (const model of models) {
-            const fingerprint = `${model.remainingFraction?.toFixed(6)}_${model.resetTime.getTime()}`;
-            if (!statsMap.has(fingerprint)) {
-                statsMap.set(fingerprint, []);
+            const family = resolveAutoGroupFamily(model.modelId, model.label);
+            if (!family) {
+                continue;
             }
-            statsMap.get(fingerprint)!.push(model.modelId);
+            if (!familyBuckets.has(family)) {
+                familyBuckets.set(family, []);
+            }
+            familyBuckets.get(family)!.push(model.modelId);
         }
 
-        // 2. 检查是否所有模型都被分到了同一个大组
-        // 这通常发生在所有模型都是满血状态（或状态完全一致）时，此时按状态分组没有意义
-        if (statsMap.size === 1 && models.length > 1) {
-            logger.info('Auto-grouping detected degenerate state (all models identical), falling back to ID-based fallback grouping.');
-            return this.groupBasedOnSeries(models);
-        }
-        
-        // 3. 正常情况：使用配额指纹生成映射
-        const mappings: Record<string, string> = {};
-        for (const [, modelIds] of statsMap) {
-            const stableGroupId = modelIds.sort().join('_');
-            for (const modelId of modelIds) {
-                mappings[modelId] = stableGroupId;
+        const groupMappings: Record<string, string> = {};
+        const groupNames: Record<string, string> = {};
+
+        for (const family of AUTO_GROUP_FAMILY_ORDER) {
+            const modelIds = familyBuckets.get(family);
+            if (!modelIds || modelIds.length === 0) {
+                continue;
+            }
+
+            const uniqueModelIds = Array.from(new Set(modelIds));
+            const stableGroupId = uniqueModelIds.sort().join('_');
+            const groupName = AUTO_GROUP_FAMILY_DISPLAY_NAMES[family];
+
+            for (const modelId of uniqueModelIds) {
+                groupMappings[modelId] = stableGroupId;
+                groupNames[modelId] = groupName;
             }
         }
-        
-        return mappings;
+
+        return {
+            groupMappings,
+            groupNames,
+        };
     }
 
     /**
-     * 基于模型ID的硬编码兜底分组逻辑
+     * 根据当前模型列表计算分组映射（与“自动分组”一致）
+     * 返回 modelId -> groupId 的映射
      */
-    private static groupBasedOnSeries(models: ModelQuotaInfo[]): Record<string, string> {
-        const seriesMap = new Map<string, string[]>();
-
-        const normalizeModelMatchText = (value: string | undefined): string =>
-            (value || '')
-                .toLowerCase()
-                .replace(/[_-]+/g, ' ')
-                .replace(/\s+/g, ' ')
-                .trim();
-
-        const isGeminiProTier = (modelIdLower: string, labelText: string): boolean =>
-            /^gemini-\d+(?:\.\d+)?-pro-(high|low)(?:-|$)/.test(modelIdLower) ||
-            /^gemini \d+(?:\.\d+)? pro(?: \((high|low)\)| (high|low))\b/.test(labelText);
-
-        const isGeminiFlash = (modelIdLower: string, labelText: string): boolean =>
-            /^gemini-\d+(?:\.\d+)?-flash(?:-|$)/.test(modelIdLower) ||
-            /^gemini \d+(?:\.\d+)? flash\b/.test(labelText);
-
-        const isGeminiImage = (modelIdLower: string, labelText: string): boolean =>
-            /^gemini-\d+(?:\.\d+)?-pro-image(?:-|$)/.test(modelIdLower) ||
-            /^gemini \d+(?:\.\d+)? pro image\b/.test(labelText);
-
-        const isClaudeFamily = (modelIdLower: string, labelText: string): boolean =>
-            modelIdLower.startsWith('claude-') ||
-            modelIdLower.startsWith('model_claude') ||
-            labelText.startsWith('claude ');
-
-        // 兜底分组规则：精确 ID + 前缀/模式匹配（忽略版本号）
-        const GROUPS = {
-            CLAUDE: {
-                name: 'Claude',
-                ids: [
-                    'MODEL_CLAUDE_4_5_SONNET',
-                    'MODEL_CLAUDE_4_5_SONNET_THINKING',
-                    'MODEL_PLACEHOLDER_M12',
-                    'MODEL_PLACEHOLDER_M26',
-                    'MODEL_PLACEHOLDER_M35',
-                    'MODEL_OPENAI_GPT_OSS_120B_MEDIUM',
-                ],
-                matcher: isClaudeFamily,
-            },
-            GEMINI_PRO: {
-                name: 'Gemini Pro',
-                ids: ['MODEL_PLACEHOLDER_M8', 'MODEL_PLACEHOLDER_M7', 'MODEL_PLACEHOLDER_M36', 'MODEL_PLACEHOLDER_M37'],
-                matcher: isGeminiProTier,
-            },
-            GEMINI_FLASH: {
-                name: 'Gemini Flash',
-                ids: ['MODEL_PLACEHOLDER_M18'],
-                matcher: isGeminiFlash,
-            },
-            GEMINI_IMAGE: {
-                name: 'Gemini Image',
-                ids: ['MODEL_PLACEHOLDER_M9'],
-                matcher: isGeminiImage,
-            },
-        };
-
-        for (const model of models) {
-            const id = model.modelId;
-            const idLower = id.toLowerCase();
-            const labelText = normalizeModelMatchText(model.label || id);
-            let groupName = 'Other';
-
-            if (GROUPS.CLAUDE.ids.includes(id) || GROUPS.CLAUDE.matcher(idLower, labelText)) {
-                groupName = GROUPS.CLAUDE.name;
-            } else if (GROUPS.GEMINI_PRO.ids.includes(id) || GROUPS.GEMINI_PRO.matcher(idLower, labelText)) {
-                groupName = GROUPS.GEMINI_PRO.name;
-            } else if (GROUPS.GEMINI_FLASH.ids.includes(id) || GROUPS.GEMINI_FLASH.matcher(idLower, labelText)) {
-                groupName = GROUPS.GEMINI_FLASH.name;
-            } else if (GROUPS.GEMINI_IMAGE.ids.includes(id) || GROUPS.GEMINI_IMAGE.matcher(idLower, labelText)) {
-                groupName = GROUPS.GEMINI_IMAGE.name;
-            }
-
-            if (!seriesMap.has(groupName)) {
-                seriesMap.set(groupName, []);
-            }
-            seriesMap.get(groupName)!.push(id);
-        }
-
-        const mappings: Record<string, string> = {};
-        for (const [, modelIds] of seriesMap) {
-            const stableGroupId = modelIds.sort().join('_');
-            for (const modelId of modelIds) {
-                mappings[modelId] = stableGroupId;
-            }
-        }
-        return mappings;
+    static calculateGroupMappings(models: ModelQuotaInfo[]): Record<string, string> {
+        return this.calculateSmartGrouping(models).groupMappings;
     }
 }
 

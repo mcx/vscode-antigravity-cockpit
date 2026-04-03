@@ -47,8 +47,6 @@ export interface CockpitConfig {
     warningThreshold: number;
     /** 危险阈值 (%) */
     criticalThreshold: number;
-    /** 自动切换阈值 (%)，0 表示禁用 */
-    autoSwitchThreshold: number;
     /** 配额来源 */
     quotaSource: string;
     /** 显示模式 */
@@ -103,27 +101,6 @@ class ConfigService {
         await this.migrateDeprecatedModelPreferences();
         await this.cleanupLegacySettings();
         await this.ensureAuthorizedQuotaSource();
-        await this.migrateAutoSwitchDefault();
-    }
-
-    /**
-     * v2.1.37: 旧版本默认 autoSwitch=true，升级后需要一次性重置为 false
-     */
-    private async migrateAutoSwitchDefault(): Promise<void> {
-        if (!this.globalState) {
-            return;
-        }
-        const migrationKey = `${ConfigService.stateKeyPrefix}.migratedAutoSwitchOff.v2137`;
-        if (this.globalState.get<boolean>(migrationKey, false)) {
-            return;
-        }
-        const stateKey = this.buildStateKey('antigravityToolsAutoSwitchEnabled');
-        const current = this.globalState.get<boolean>(stateKey);
-        if (current === true) {
-            await this.globalState.update(stateKey, false);
-            logger.info('[ConfigService] Migrated antigravityToolsAutoSwitchEnabled from true to false (v2.1.37 default change)');
-        }
-        await this.globalState.update(migrationKey, true);
     }
 
     private async ensureAuthorizedQuotaSource(): Promise<void> {
@@ -163,7 +140,6 @@ class ConfigService {
             groupMappings: this.getConfigStateValue(CONFIG_KEYS.GROUP_MAPPINGS, {}),
             warningThreshold: config.get<number>(CONFIG_KEYS.WARNING_THRESHOLD, QUOTA_THRESHOLDS.WARNING_DEFAULT),
             criticalThreshold: config.get<number>(CONFIG_KEYS.CRITICAL_THRESHOLD, QUOTA_THRESHOLDS.CRITICAL_DEFAULT),
-            autoSwitchThreshold: config.get<number>(CONFIG_KEYS.AUTO_SWITCH_THRESHOLD, 20),
             quotaSource: 'authorized',
             displayMode: config.get<string>(CONFIG_KEYS.DISPLAY_MODE, DISPLAY_MODE.WEBVIEW),
             profileHidden: config.get<boolean>(CONFIG_KEYS.PROFILE_HIDDEN, false),

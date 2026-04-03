@@ -558,10 +558,11 @@ export class QuickPickView {
                 
             case 'autoGroup':
                 if (this.lastSnapshot && this.lastSnapshot.models.length > 0) {
-                    const newMappings = ReactorCore.calculateGroupMappings(this.lastSnapshot.models);
-                    await configService.updateGroupMappings(newMappings);
+                    const autoGrouping = ReactorCore.calculateSmartGrouping(this.lastSnapshot.models);
+                    await configService.updateGroupMappings(autoGrouping.groupMappings);
+                    await configService.updateConfig('groupingCustomNames', autoGrouping.groupNames);
                     vscode.window.showInformationMessage(
-                        t('grouping.autoGroupApplied', { count: Object.keys(newMappings).length }),
+                        t('grouping.autoGroupApplied', { count: Object.keys(autoGrouping.groupMappings).length }),
                     );
                     // 需要触发数据刷新以更新分组
                     if (this.refreshCallback) {

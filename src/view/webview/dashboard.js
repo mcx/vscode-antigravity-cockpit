@@ -59,7 +59,6 @@ import { createAnnouncementModule } from './dashboard_announcements';
     let authorizedAvailable = false;
     let authorizationStatus = null;
     let antigravityToolsSyncEnabled = false;
-    let antigravityToolsAutoSwitchEnabled = false;
     let visibleModelIds = [];
     let renameOriginalName = ''; // 原始名称（用于重置）
     let isProfileHidden = false;  // 控制整个计划详情卡片的显示/隐藏
@@ -427,12 +426,10 @@ import { createAnnouncementModule } from './dashboard_announcements';
             const notificationCheckbox = document.getElementById('notification-enabled');
             const warningInput = document.getElementById('warning-threshold');
             const criticalInput = document.getElementById('critical-threshold');
-            const autoSwitchCheckbox = document.getElementById('dashboard-auto-switch-checkbox');
 
             if (notificationCheckbox) notificationCheckbox.checked = currentConfig.notificationEnabled !== false;
             if (warningInput) warningInput.value = currentConfig.warningThreshold || 30;
             if (criticalInput) criticalInput.value = currentConfig.criticalThreshold || 10;
-            if (autoSwitchCheckbox) autoSwitchCheckbox.checked = antigravityToolsAutoSwitchEnabled;
 
             // Display Mode Select Logic (Webview vs QuickPick)
             const displayModeSelect = document.getElementById('display-mode-select');
@@ -528,16 +525,6 @@ import { createAnnouncementModule } from './dashboard_announcements';
                     command: 'updateNotificationEnabled',
                     notificationEnabled: notificationCheckbox.checked
                 });
-            });
-        }
-
-        // 自动切号开关即时保存
-        const autoSwitchCheckbox = document.getElementById('dashboard-auto-switch-checkbox');
-        if (autoSwitchCheckbox) {
-            autoSwitchCheckbox.onchange = null;
-            autoSwitchCheckbox.addEventListener('change', () => {
-                antigravityToolsAutoSwitchEnabled = autoSwitchCheckbox.checked;
-                vscode.postMessage({ command: 'antigravityToolsSync.toggleAutoSwitch', enabled: autoSwitchCheckbox.checked });
             });
         }
 
@@ -866,9 +853,6 @@ import { createAnnouncementModule } from './dashboard_announcements';
                     // Auto sync is intentionally forced off in UI.
                     antigravityToolsSyncEnabled = false;
                 }
-                if (message.config.antigravityToolsAutoSwitchEnabled !== undefined) {
-                    antigravityToolsAutoSwitchEnabled = message.config.antigravityToolsAutoSwitchEnabled;
-                }
 
 
             }
@@ -948,9 +932,6 @@ import { createAnnouncementModule } from './dashboard_announcements';
             if (message.data?.enabled !== undefined || message.data?.autoSyncEnabled !== undefined) {
                 // Auto sync is intentionally forced off in UI.
                 antigravityToolsSyncEnabled = false;
-            }
-            if (message.data?.autoSwitchEnabled !== undefined) {
-                antigravityToolsAutoSwitchEnabled = message.data.autoSwitchEnabled;
             }
             updateQuotaAuthUI();
         }
@@ -1085,18 +1066,6 @@ import { createAnnouncementModule } from './dashboard_announcements';
                             </details>
                         </div>
 
-                        <!-- 自动切换 -->
-                        <div class="at-sync-section">
-                            <div class="at-sync-section-title">🔄 ${i18n['atSyncConfig.autoSwitchTitle'] || '自动切换'}</div>
-                            <div class="at-sync-toggle-row" style="display: flex; align-items: center; gap: 10px; padding: 8px 0;">
-                                <label class="at-sync-toggle-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1;">
-                                    <input type="checkbox" id="at-sync-auto-switch-checkbox" class="at-sync-checkbox" />
-                                    <span>${i18n['atSyncConfig.enableAutoSwitch'] || '自动切换账户'}</span>
-                                </label>
-                            </div>
-                            <div class="at-sync-description" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">${i18n['atSyncConfig.autoSwitchDesc'] || '启用后优先切换到 Antigravity Tools 当前账号；不可用则跟随本地客户端账号（仅授权模式生效）。'}</div>
-                        </div>
-
                         <!-- 手动导入 -->
                         <div class="at-sync-section">
                             <div class="at-sync-section-title">📥 ${i18n['atSyncConfig.manualImportTitle'] || '手动导入'}</div>
@@ -1122,18 +1091,6 @@ import { createAnnouncementModule } from './dashboard_announcements';
                 if (e.target === modal) closeATSyncConfigModal();
             });
 
-            // 自动切号开关事件
-            modal.querySelector('#at-sync-auto-switch-checkbox')?.addEventListener('change', (e) => {
-                const checked = e.target.checked;
-                antigravityToolsAutoSwitchEnabled = checked;
-                vscode.postMessage({ command: 'antigravityToolsSync.toggleAutoSwitch', enabled: checked });
-            });
-        }
-
-        // 刷新自动切号开关状态
-        const autoSwitchCheckbox = modal.querySelector('#at-sync-auto-switch-checkbox');
-        if (autoSwitchCheckbox) {
-            autoSwitchCheckbox.checked = antigravityToolsAutoSwitchEnabled;
         }
 
         modal.querySelectorAll('.at-sync-details').forEach((detail) => {
@@ -1888,7 +1845,7 @@ import { createAnnouncementModule } from './dashboard_announcements';
         const activeEmail = activeAccount || (accounts.length > 0 ? accounts[0].email : null);
 
         if (authUi) {
-            authUi.updateState(auth, antigravityToolsSyncEnabled, antigravityToolsAutoSwitchEnabled);
+            authUi.updateState(auth, antigravityToolsSyncEnabled);
             authUi.renderAuthRow(row, {
                 showSyncToggleInline: false,
             });

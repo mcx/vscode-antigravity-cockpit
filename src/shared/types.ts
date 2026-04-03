@@ -370,7 +370,6 @@ export type WebviewMessageType =
     | 'antigravityToolsSync.importJson'
     | 'antigravityToolsSync.cancel'
     | 'antigravityToolsSync.toggle'
-    | 'antigravityToolsSync.toggleAutoSwitch'
     | 'antigravityToolsSync.switchToClient'
     // General
     | 'openUrl'
@@ -410,8 +409,6 @@ export interface WebviewMessage {
     warningThreshold?: number;
     /** 危险阈值 (updateThresholds) */
     criticalThreshold?: number;
-    /** 自动切换阈值 (updateThresholds) */
-    autoSwitchThreshold?: number;
     /** 状态栏显示格式 (updateStatusBarFormat) */
     statusBarFormat?: string;
     /** 配额来源 (updateQuotaSource) */
@@ -557,8 +554,6 @@ export interface DashboardConfig {
     language?: string;
     /** 是否开启 AntigravityTools 同步（来自 globalState） */
     antigravityToolsSyncEnabled?: boolean;
-    /** 是否开启 AntigravityTools 自动切换（来自 globalState） */
-    antigravityToolsAutoSwitchEnabled?: boolean;
 }
 
 /** 状态栏更新数据 */

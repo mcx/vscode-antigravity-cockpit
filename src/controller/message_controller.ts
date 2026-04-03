@@ -370,9 +370,14 @@ export class MessageController {
                         if (Object.keys(config.groupMappings).length === 0) {
                             const latestSnapshot = this.reactor.getLatestSnapshot();
                             if (latestSnapshot && latestSnapshot.models.length > 0) {
-                                const newMappings = ReactorCore.calculateGroupMappings(latestSnapshot.models);
-                                await configService.updateGroupMappings(newMappings);
-                                logger.info(`First-time grouping: auto-grouped ${Object.keys(newMappings).length} models`);
+                                const autoGrouping = ReactorCore.calculateSmartGrouping(latestSnapshot.models);
+                                if (Object.keys(autoGrouping.groupMappings).length > 0) {
+                                    await configService.updateGroupMappings(autoGrouping.groupMappings);
+                                    await configService.updateConfig('groupingCustomNames', autoGrouping.groupNames);
+                                    logger.info(`First-time grouping: auto-grouped ${Object.keys(autoGrouping.groupMappings).length} models`);
+                                } else {
+                                    logger.debug('First-time grouping skipped: no models matched smart-group families');
+                                }
                             }
                         }
                     }
@@ -434,10 +439,11 @@ export class MessageController {
                     // 获取最新的快照数据
                     const latestSnapshot = this.reactor.getLatestSnapshot();
                     if (latestSnapshot && latestSnapshot.models.length > 0) {
-                        // 计算新的分组映射
-                        const newMappings = ReactorCore.calculateGroupMappings(latestSnapshot.models);
-                        await configService.updateGroupMappings(newMappings);
-                        logger.info(`Auto-grouped ${Object.keys(newMappings).length} models`);
+                        // 计算新的分组映射（与自定义分组弹框的“自动分组”一致）
+                        const autoGrouping = ReactorCore.calculateSmartGrouping(latestSnapshot.models);
+                        await configService.updateGroupMappings(autoGrouping.groupMappings);
+                        await configService.updateConfig('groupingCustomNames', autoGrouping.groupNames);
+                        logger.info(`Auto-grouped ${Object.keys(autoGrouping.groupMappings).length} models`);
 
                         // 清除之前的 pinnedGroups（因为 groupId 已变化）
                         await configService.updateConfig('pinnedGroups', []);
@@ -467,26 +473,17 @@ export class MessageController {
                     if (message.warningThreshold !== undefined && message.criticalThreshold !== undefined) {
                         const warningVal = message.warningThreshold as number;
                         const criticalVal = message.criticalThreshold as number;
-                        const hasAutoSwitch = message.autoSwitchThreshold !== undefined;
-                        const autoSwitchVal = hasAutoSwitch ? (message.autoSwitchThreshold as number) : undefined;
 
                         if (criticalVal < warningVal && warningVal >= 5 && warningVal <= 80 && criticalVal >= 1 && criticalVal <= 50) {
                             await configService.updateConfig('warningThreshold', warningVal);
                             await configService.updateConfig('criticalThreshold', criticalVal);
-                            if (hasAutoSwitch && autoSwitchVal !== undefined && autoSwitchVal >= 0 && autoSwitchVal <= 100) {
-                                await configService.updateConfig('autoSwitchThreshold', autoSwitchVal);
-                            }
 
                             // Note: threshold.updated 文案模板末尾自带一个 "%"，
                             // 这里保证最后一个字段不再带 "%"，避免出现 "%%"。
-                            const summaryText = hasAutoSwitch && autoSwitchVal !== undefined
-                                ? `Warning: ${warningVal}%, Critical: ${criticalVal}%, Auto Switch: ${autoSwitchVal}`
-                                : `Warning: ${warningVal}%, Critical: ${criticalVal}`;
+                            const summaryText = `Warning: ${warningVal}%, Critical: ${criticalVal}`;
 
                             logger.info(
-                                hasAutoSwitch && autoSwitchVal !== undefined
-                                    ? `Thresholds updated: warning=${warningVal}%, critical=${criticalVal}%, autoSwitch=${autoSwitchVal}%`
-                                    : `Thresholds updated: warning=${warningVal}%, critical=${criticalVal}%`,
+                                `Thresholds updated: warning=${warningVal}%, critical=${criticalVal}%`,
                             );
                             vscode.window.showInformationMessage(
                                 t('threshold.updated', { value: summaryText }),
@@ -639,24 +636,10 @@ export class MessageController {
                     if (typeof message.enabled === 'boolean') {
                         // Auto sync has been deprecated and is now fixed OFF.
                         await configService.setStateFlag('antigravityToolsSyncEnabled', false);
-                        const autoSwitchEnabled = configService.getStateFlag('antigravityToolsAutoSwitchEnabled', false);
                         this.hud.sendMessage({
                             type: 'antigravityToolsSyncStatus',
-                            data: { autoSyncEnabled: false, autoSwitchEnabled },
+                            data: { autoSyncEnabled: false },
                         });
-                    }
-                    break;
-                case 'antigravityToolsSync.toggleAutoSwitch':
-                    if (typeof message.enabled === 'boolean') {
-                        await configService.setStateFlag('antigravityToolsAutoSwitchEnabled', message.enabled);
-                        const autoSyncEnabled = configService.getStateFlag('antigravityToolsSyncEnabled', false);
-                        this.hud.sendMessage({
-                            type: 'antigravityToolsSyncStatus',
-                            data: { autoSyncEnabled, autoSwitchEnabled: message.enabled },
-                        });
-                        if (message.enabled) {
-                            await this.handleAntigravityToolsImport(true);
-                        }
                     }
                     break;
 
@@ -1450,8 +1433,7 @@ export class MessageController {
     private async handleAntigravityToolsImport(isAuto: boolean): Promise<void> {
         try {
             const autoSyncEnabled = configService.getStateFlag('antigravityToolsSyncEnabled', false);
-            const autoSwitchEnabled = configService.getStateFlag('antigravityToolsAutoSwitchEnabled', false);
-            if (isAuto && !autoSyncEnabled && !autoSwitchEnabled) {
+            if (isAuto && !autoSyncEnabled) {
                 return;
             }
             const detection = await antigravityToolsSyncService.detect();
@@ -1490,12 +1472,12 @@ export class MessageController {
                                     currentEmail: detection.currentEmail,
                                     sameAccount,
                                     autoConfirm: true,
-                                    autoConfirmImportOnly: !autoSwitchEnabled,
+                                    autoConfirmImportOnly: true,
                                 },
                             });
                         } else {
                             // 面板不可见，静默导入
-                            await this.performAntigravityToolsImport(activeEmail, true, !autoSwitchEnabled);
+                            await this.performAntigravityToolsImport(activeEmail, true, true);
                             vscode.window.showInformationMessage(
                                 t('antigravityToolsSync.autoImported', { email: detection.currentEmail }) 
                                 || `已自动同步账户: ${detection.currentEmail}`,
@@ -1531,20 +1513,8 @@ export class MessageController {
 
             // 场景 D：无新增账户，但账户不一致
             if (isAuto) {
-                if (!autoSwitchEnabled) {
-                    return;
-                }
-                // 自动模式：静默切换（无需网络请求，瞬间完成）
-                await antigravityToolsSyncService.switchOnly(detection.currentEmail);
-                // 刷新状态
-                const state = await autoTriggerController.getState();
-                this.hud.sendMessage({ type: 'autoTriggerState', data: state });
-                this.hud.sendMessage({ type: 'antigravityToolsSyncComplete', data: { success: true } });
-                // 修复：账号切换后必须立即请求获取新账号的配额数据
-                if (configService.getConfig().quotaSource === 'authorized') {
-                    this.reactor.syncTelemetry();
-                }
-                logger.info(`AntigravityTools Sync: Auto-switched to ${detection.currentEmail}`);
+                // 自动模式下仅导入，不再自动切换账号。
+                return;
             } else {
                 // 手动模式：弹框询问
                 this.hud.sendMessage({
