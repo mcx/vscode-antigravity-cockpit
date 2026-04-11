@@ -4,6 +4,7 @@
  */
 
 import { EventEmitter } from 'events';
+import * as childProcess from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { logger } from '../shared/log_service';
@@ -47,6 +48,20 @@ export function readServerConfig(): ServerConfig | null {
 
 function resolveWslWindowsHost(): string {
     try {
+        const defaultRoute = childProcess.execFileSync(
+            'ip',
+            ['route', 'show', 'default'],
+            { encoding: 'utf8' },
+        ).trim();
+        const gatewayMatch = defaultRoute.match(/\bdefault\s+via\s+([^\s]+)\b/i);
+        if (gatewayMatch?.[1]) {
+            return gatewayMatch[1];
+        }
+    } catch (error) {
+        logger.debug('[WS] 读取 WSL 默认网关失败，将尝试 resolv.conf:', error);
+    }
+
+    try {
         const content = fs.readFileSync('/etc/resolv.conf', 'utf-8');
         const lines = content.split(/\r?\n/);
         for (const line of lines) {
@@ -63,7 +78,9 @@ function resolveWslWindowsHost(): string {
 
 function resolveWsHost(): string {
     if (isAntigravityWslRemote()) {
-        return resolveWslWindowsHost();
+        const wslHost = resolveWslWindowsHost();
+        logger.debug(`[WS] WSL host resolved to ${wslHost}`);
+        return wslHost;
     }
     return '127.0.0.1';
 }

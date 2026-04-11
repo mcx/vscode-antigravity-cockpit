@@ -6,6 +6,7 @@ let overrideUserDataDir: string | null = null;
 let currentRemoteName: string | null = null;
 let cachedWslWindowsAppDataDir: string | null | undefined;
 let cachedWslWindowsUserProfileDir: string | null | undefined;
+let cachedWslRuntimeDetected: boolean | undefined;
 
 function resolveWslWindowsPathFromEnv(varName: 'APPDATA' | 'USERPROFILE'): string {
     const windowsValue = childProcess.execFileSync(
@@ -39,10 +40,40 @@ export function setAntigravityRemoteName(remoteName: string | null): void {
     currentRemoteName = remoteName && remoteName.trim().length > 0 ? remoteName : null;
     cachedWslWindowsAppDataDir = undefined;
     cachedWslWindowsUserProfileDir = undefined;
+    cachedWslRuntimeDetected = undefined;
 }
 
 export function getAntigravityUserDataDir(): string | null {
     return overrideUserDataDir;
+}
+
+function detectWslRuntime(): boolean {
+    if (cachedWslRuntimeDetected !== undefined) {
+        return cachedWslRuntimeDetected;
+    }
+
+    if (process.platform !== 'linux') {
+        cachedWslRuntimeDetected = false;
+        return cachedWslRuntimeDetected;
+    }
+
+    if (process.env.WSL_INTEROP || process.env.WSL_DISTRO_NAME) {
+        cachedWslRuntimeDetected = true;
+        return cachedWslRuntimeDetected;
+    }
+
+    try {
+        const kernelRelease = childProcess.execFileSync(
+            'uname',
+            ['-r'],
+            { encoding: 'utf8' },
+        ).trim().toLowerCase();
+        cachedWslRuntimeDetected = kernelRelease.includes('microsoft');
+        return cachedWslRuntimeDetected;
+    } catch {
+        cachedWslRuntimeDetected = false;
+        return cachedWslRuntimeDetected;
+    }
 }
 
 function resolveWslWindowsAppDataDir(): string {
@@ -86,7 +117,15 @@ function resolveWslWindowsUserProfileDir(): string {
 }
 
 export function isAntigravityWslRemote(): boolean {
-    return currentRemoteName === 'wsl';
+    if (currentRemoteName === 'wsl') {
+        return true;
+    }
+
+    if (currentRemoteName) {
+        return false;
+    }
+
+    return detectWslRuntime();
 }
 
 export function getCockpitToolsSharedDir(): string {
