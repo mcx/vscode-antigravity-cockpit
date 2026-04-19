@@ -162,6 +162,29 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     // 初始化状态栏控制器
     statusBar = new StatusBarController(context);
 
+    const syncStatusBarFromAccountsCache = (): void => {
+        const currentEmail = accountsRefreshService.getCurrentEmail();
+        if (!currentEmail) {
+            return;
+        }
+        const cache = accountsRefreshService.getQuotaCache(currentEmail);
+        if (!cache || cache.loading || cache.error || !cache.snapshot?.isConnected) {
+            return;
+        }
+        try {
+            statusBar.update(cache.snapshot, configService.getConfig());
+        } catch (error) {
+            const err = error instanceof Error ? error : new Error(String(error));
+            logger.debug(`[StatusBar] Sync from accounts cache skipped: ${err.message}`);
+        }
+    };
+
+    context.subscriptions.push(
+        accountsRefreshService.onDidUpdate(() => {
+            syncStatusBarFromAccountsCache();
+        }),
+    );
+
     // 定义重试/启动回调
     const onRetry = async () => {
         systemOnline = false;

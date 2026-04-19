@@ -12,6 +12,7 @@ import { getOfficialIdeVersion } from './official_host_version';
 export interface CloudCodeProjectInfo {
     projectId?: string;
     tierId?: string;
+    availableAICredits?: number;
 }
 
 export interface CloudCodeQuotaResponse {
@@ -64,9 +65,18 @@ export class CloudCodeRequestError extends Error {
     }
 }
 
+interface LoadCodeAssistAvailableCredit {
+    creditAmount?: string | number;
+}
+
+interface LoadCodeAssistTier {
+    id?: string;
+    availableCredits?: LoadCodeAssistAvailableCredit[];
+}
+
 interface LoadCodeAssistResponse {
-    currentTier?: { id?: string };
-    paidTier?: { id?: string };
+    currentTier?: LoadCodeAssistTier;
+    paidTier?: LoadCodeAssistTier;
     allowedTiers?: Array<{ id?: string; isDefault?: boolean }>;
     cloudaicompanionProject?: unknown;
 }
@@ -81,6 +91,44 @@ const DEFAULT_ATTEMPTS = 2;
 const BACKOFF_BASE_MS = 500;
 const BACKOFF_MAX_MS = 4000;
 const ONBOARD_POLL_DELAY_MS = 500;
+
+function parseAvailableCreditAmount(value: string | number | undefined): number | null {
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? Math.max(0, value) : null;
+    }
+    if (typeof value !== 'string') {
+        return null;
+    }
+    const normalized = value.trim().replace(/,/g, '');
+    if (!normalized) {
+        return null;
+    }
+    const parsed = Number.parseFloat(normalized);
+    if (!Number.isFinite(parsed)) {
+        return null;
+    }
+    return Math.max(0, parsed);
+}
+
+function sumAvailableAICredits(tier?: LoadCodeAssistTier): number | undefined {
+    const credits = tier?.availableCredits;
+    if (!Array.isArray(credits) || credits.length === 0) {
+        return undefined;
+    }
+
+    let total = 0;
+    let hasValidAmount = false;
+    for (const credit of credits) {
+        const amount = parseAvailableCreditAmount(credit?.creditAmount);
+        if (amount === null) {
+            continue;
+        }
+        total += amount;
+        hasValidAmount = true;
+    }
+
+    return hasValidAmount ? total : undefined;
+}
 
 let cachedPluginVersion: string | null = null;
 
@@ -178,6 +226,7 @@ export class CloudCodeClient {
         return {
             projectId: this.extractProjectId(data?.cloudaicompanionProject),
             tierId: data?.paidTier?.id || data?.currentTier?.id,
+            availableAICredits: sumAvailableAICredits(data?.paidTier),
         };
     }
 
@@ -189,18 +238,19 @@ export class CloudCodeClient {
 
         const projectId = this.extractProjectId(data?.cloudaicompanionProject);
         const tierId = data?.paidTier?.id || data?.currentTier?.id;
+        const availableAICredits = sumAvailableAICredits(data?.paidTier);
         if (projectId) {
-            return { projectId, tierId };
+            return { projectId, tierId, availableAICredits };
         }
 
         const allowedTiers = data?.allowedTiers ?? [];
         const onboardTier = this.pickOnboardTier(allowedTiers) || tierId;
         if (!onboardTier) {
-            return { projectId: undefined, tierId };
+            return { projectId: undefined, tierId, availableAICredits };
         }
 
         const onboarded = await this.tryOnboardUser(accessToken, onboardTier, options);
-        return { projectId: onboarded ?? undefined, tierId: onboardTier };
+        return { projectId: onboarded ?? undefined, tierId: onboardTier, availableAICredits };
     }
 
     async fetchAvailableModels(

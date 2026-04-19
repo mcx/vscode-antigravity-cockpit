@@ -6,8 +6,11 @@ import { QuotaSnapshot } from '../shared/types';
 import { STATUS_BAR_FORMAT, QUOTA_THRESHOLDS } from '../shared/constants';
 import { autoTriggerController } from '../auto_trigger/controller';
 
+const CREDITS_LABEL = 'Credits';
+
 export class StatusBarController {
     private statusBarItem: vscode.StatusBarItem;
+    private lastKnownCreditsAvailable?: number;
 
     constructor(context: vscode.ExtensionContext) {
         this.statusBarItem = vscode.window.createStatusBarItem(
@@ -23,15 +26,17 @@ export class StatusBarController {
     }
 
     public update(snapshot: QuotaSnapshot, config: CockpitConfig): void {
+        const creditsText = this.formatCreditsStatusText(snapshot);
+
         // 仅图标模式：直接显示 🚀
         if (config.statusBarFormat === STATUS_BAR_FORMAT.ICON) {
-            this.statusBarItem.text = '🚀';
+            this.statusBarItem.text = creditsText ? `🚀 | ${creditsText}` : '🚀';
             this.statusBarItem.backgroundColor = undefined;
             this.statusBarItem.tooltip = this.generateQuotaTooltip(snapshot, config);
             return;
         }
 
-        const statusTextParts: string[] = [];
+        const statusTextParts: string[] = creditsText ? [creditsText] : [];
         let minPercentage = 100;
 
         // 检查是否启用分组显示
@@ -185,7 +190,10 @@ export class StatusBarController {
     }
 
     public setReady(): void {
-        this.statusBarItem.text = `$(rocket) ${t('statusBar.ready')}`;
+        const available = Number.isFinite(this.lastKnownCreditsAvailable)
+            ? this.formatCreditsNumber(Number(this.lastKnownCreditsAvailable))
+            : '--';
+        this.statusBarItem.text = `$(rocket) ${CREDITS_LABEL}: ${available}`;
         this.statusBarItem.backgroundColor = undefined;
     }
 
@@ -202,6 +210,11 @@ export class StatusBarController {
         // 标题行（使用 tier 显示 userTier.name，与计划详情卡片保持一致）
         const planInfo = snapshot.userInfo?.tier ? ` | ${snapshot.userInfo.tier}` : '';
         md.appendMarkdown(`**🚀 ${t('dashboard.title')}${planInfo}**\n\n`);
+
+        const creditsTooltip = this.formatCreditsTooltipText(snapshot);
+        if (creditsTooltip) {
+            md.appendMarkdown(`${creditsTooltip}\n\n`);
+        }
 
         // 检查是否启用分组显示
         if (config.groupingEnabled && snapshot.groups && snapshot.groups.length > 0) {
@@ -313,6 +326,68 @@ export class StatusBarController {
         if (percentage <= criticalThreshold) { return '🔴'; }  // 危险
         if (percentage <= warningThreshold) { return '🟡'; }    // 警告
         return '🟢'; // 健康
+    }
+
+    private resolveCreditsSnapshot(snapshot: QuotaSnapshot): { available: number } | null {
+        if (Number.isFinite(snapshot.availableAICredits)) {
+            return {
+                available: Math.max(0, Number(snapshot.availableAICredits)),
+            };
+        }
+
+        const promptCredits = snapshot.promptCredits;
+        if (promptCredits && Number.isFinite(promptCredits.available)) {
+            return {
+                available: Math.max(0, Number(promptCredits.available)),
+            };
+        }
+
+        const userInfo = snapshot.userInfo;
+        if (!userInfo || !Number.isFinite(userInfo.availablePromptCredits)) {
+            return null;
+        }
+
+        return {
+            available: Math.max(0, Number(userInfo.availablePromptCredits)),
+        };
+    }
+
+    private formatCreditsStatusText(snapshot: QuotaSnapshot): string {
+        const credits = this.resolveCreditsSnapshotForDisplay(snapshot);
+        const available = credits ? this.formatCreditsNumber(credits.available) : '--';
+        return `💳 ${CREDITS_LABEL}: ${available}`;
+    }
+
+    private formatCreditsTooltipText(snapshot: QuotaSnapshot): string {
+        const credits = this.resolveCreditsSnapshotForDisplay(snapshot);
+        const available = credits ? this.formatCreditsNumber(credits.available) : '--';
+        return `**💳 ${CREDITS_LABEL}**: ${available}`;
+    }
+
+    private resolveCreditsSnapshotForDisplay(snapshot: QuotaSnapshot): { available: number } | null {
+        const current = this.resolveCreditsSnapshot(snapshot);
+        if (current) {
+            this.lastKnownCreditsAvailable = current.available;
+            return current;
+        }
+
+        if (Number.isFinite(this.lastKnownCreditsAvailable)) {
+            return {
+                available: Math.max(0, Number(this.lastKnownCreditsAvailable)),
+            };
+        }
+
+        return null;
+    }
+
+    private formatCreditsNumber(value: number): string {
+        if (!Number.isFinite(value)) {
+            return '-';
+        }
+        const rounded = Math.abs(value - Math.round(value)) < 1e-6
+            ? Math.round(value)
+            : Number(value.toFixed(2));
+        return rounded.toLocaleString();
     }
 
     private formatStatusBarText(label: string, percentage: number, format: string, config?: CockpitConfig): string {

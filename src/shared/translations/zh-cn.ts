@@ -24,6 +24,7 @@ export const zhCN = {
     'Refreshing...': '刷新中...',
     'dashboard.showCredits': '显示积分',
     'dashboard.promptCredits': 'Prompt 积分',
+    'dashboard.availableAiCredits': '可用 AI 积分',
     'dashboard.available': '可用',
     'dashboard.monthly': '每月额度',
     'dashboard.resetIn': '重置倒计时',

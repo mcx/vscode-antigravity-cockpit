@@ -22,6 +22,7 @@ export const ptBR = {
     'dashboard.refreshing': 'Atualizando...',
     'dashboard.showCredits': 'Mostrar Créditos',
     'dashboard.promptCredits': 'Créditos de Prompt',
+    'dashboard.availableAiCredits': 'Créditos de AI disponíveis',
     'dashboard.available': 'Disponível',
     'dashboard.monthly': 'Mensal',
     'dashboard.resetIn': 'Reinício em',

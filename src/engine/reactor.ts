@@ -201,6 +201,8 @@ export class ReactorCore {
     private lastRawResponse?: ServerUserStatusResponse;
     /** 上一次的授权配额模型缓存（用于 reprocess 时重新生成分组） */
     private lastAuthorizedModels?: ModelQuotaInfo[];
+    /** 最近一次成功获取到的授权 Credits（用于缓存重放时避免回退为 --） */
+    private lastAuthorizedAvailableAICredits?: number;
     /** 本地配额上次拉取时间 */
     private lastLocalFetchedAt?: number;
     /** 授权配额上次拉取时间 */
@@ -271,7 +273,12 @@ export class ReactorCore {
                 return false;
             }
             this.lastAuthorizedModels = models;
-            const telemetry = this.buildSnapshot(models);
+            const telemetry = this.buildSnapshot(
+                models,
+                undefined,
+                undefined,
+                this.getCachedAuthorizedAvailableAICredits(),
+            );
             this.publishTelemetry(telemetry, 'authorized');
             return true;
         } catch (error) {
@@ -294,6 +301,43 @@ export class ReactorCore {
         return result.snapshot;
     }
 
+    public async fetchAvailableAICreditsForAccount(email: string): Promise<number | undefined> {
+        try {
+            const tokenStatus = await oauthService.getAccessTokenStatusForAccount(email);
+            if (tokenStatus.state !== 'ok' || !tokenStatus.token) {
+                return undefined;
+            }
+
+            const credential = await credentialStorage.getCredentialForAccount(email);
+            const projectId = credential?.projectId;
+            const info = projectId
+                ? await cloudCodeClient.loadProjectInfo(tokenStatus.token, {
+                    logLabel: 'AuthorizedQuota',
+                    route: { isGcpTos: credential?.isGcpTos },
+                })
+                : await cloudCodeClient.resolveProjectId(tokenStatus.token, {
+                    logLabel: 'AuthorizedQuota',
+                    route: { isGcpTos: credential?.isGcpTos },
+                });
+
+            if (info.projectId) {
+                await credentialStorage.updateProjectIdForAccount(email, info.projectId);
+            }
+
+            if (!Number.isFinite(info.availableAICredits)) {
+                return undefined;
+            }
+            return Math.max(0, Number(info.availableAICredits));
+        } catch (error) {
+            if (error instanceof CloudCodeAuthError) {
+                throw error;
+            }
+            const err = error instanceof Error ? error : new Error(String(error));
+            logger.warn(`[AuthorizedQuota] fetch credits failed for ${email}: ${err.message}`);
+            return undefined;
+        }
+    }
+
     async fetchQuotaForAccountWithSource(
         email: string,
         options?: { forceRefresh?: boolean },
@@ -313,23 +357,31 @@ export class ReactorCore {
             // 获取 projectId
             const credential = await credentialStorage.getCredentialForAccount(email);
             let projectId = credential?.projectId;
-            if (!projectId) {
-                try {
-                    const info = await cloudCodeClient.resolveProjectId(tokenStatus.token, {
+            let availableAICredits: number | undefined;
+            try {
+                const info = projectId
+                    ? await cloudCodeClient.loadProjectInfo(tokenStatus.token, {
+                        logLabel: 'AuthorizedQuota',
+                        route: { isGcpTos: credential?.isGcpTos },
+                    })
+                    : await cloudCodeClient.resolveProjectId(tokenStatus.token, {
                         logLabel: 'AuthorizedQuota',
                         route: { isGcpTos: credential?.isGcpTos },
                     });
-                    if (info.projectId) {
-                        projectId = info.projectId;
-                        await credentialStorage.updateProjectIdForAccount(email, projectId);
-                    }
-                } catch (error) {
-                    if (error instanceof CloudCodeAuthError) {
-                        throw error;
-                    }
-                    const err = error instanceof Error ? error : new Error(String(error));
-                    logger.warn(`[AuthorizedQuota] resolveProjectId failed for ${email}: ${err.message}`);
+
+                if (info.projectId) {
+                    projectId = info.projectId;
+                    await credentialStorage.updateProjectIdForAccount(email, projectId);
                 }
+                if (Number.isFinite(info.availableAICredits)) {
+                    availableAICredits = Math.max(0, Number(info.availableAICredits));
+                }
+            } catch (error) {
+                if (error instanceof CloudCodeAuthError) {
+                    throw error;
+                }
+                const err = error instanceof Error ? error : new Error(String(error));
+                logger.warn(`[AuthorizedQuota] loadCodeAssist failed for ${email}: ${err.message}`);
             }
 
             // 获取配额模型（复用现有方法）
@@ -343,7 +395,7 @@ export class ReactorCore {
             const models = modelsResult.models;
 
             // 构建快照（复用现有分组/过滤逻辑）
-            const snapshot = this.buildSnapshot(models);
+            const snapshot = this.buildSnapshot(models, undefined, undefined, availableAICredits);
             
             logger.info(`[ReactorCore] Quota for ${email}: ${models.length} models, ${snapshot.groups?.length ?? 0} groups`);
             return {
@@ -634,7 +686,12 @@ export class ReactorCore {
                         const cacheAge = this.getCacheAgeMs('authorized');
                         const ageNote = cacheAge !== undefined ? ` (age=${Math.round(cacheAge / 1000)}s)` : '';
                         logger.warn(`[AuthorizedQuota] Request failed, using cached models${ageNote}`);
-                        const telemetry = this.buildSnapshot(this.lastAuthorizedModels);
+                        const telemetry = this.buildSnapshot(
+                            this.lastAuthorizedModels,
+                            undefined,
+                            undefined,
+                            this.getCachedAuthorizedAvailableAICredits(),
+                        );
                         this.publishTelemetry(telemetry, 'authorized');
                         return;
                     }
@@ -798,29 +855,40 @@ export class ReactorCore {
         const activeAccount = await credentialStorage.getActiveAccount();
 
         let projectId: string | undefined;
+        let availableAICredits: number | undefined;
         const credential = await credentialStorage.getCredential();
         if (credential?.projectId) {
             projectId = credential.projectId;
-        } else {
-            try {
-                const info = await cloudCodeClient.resolveProjectId(accessToken, {
+        }
+
+        try {
+            const info = projectId
+                ? await cloudCodeClient.loadProjectInfo(accessToken, {
+                    logLabel: 'AuthorizedQuota',
+                    route: { isGcpTos: credential?.isGcpTos },
+                })
+                : await cloudCodeClient.resolveProjectId(accessToken, {
                     logLabel: 'AuthorizedQuota',
                     route: { isGcpTos: credential?.isGcpTos },
                 });
-                if (info.projectId) {
-                    projectId = info.projectId;
-                    if (credential) {
-                        credential.projectId = projectId;
-                        await credentialStorage.saveCredential(credential);
-                    }
+
+            if (info.projectId) {
+                projectId = info.projectId;
+                if (credential && credential.projectId !== projectId) {
+                    credential.projectId = projectId;
+                    await credentialStorage.saveCredential(credential);
                 }
-            } catch (error) {
-                if (error instanceof CloudCodeAuthError) {
-                    throw error;
-                }
-                const err = error instanceof Error ? error : new Error(String(error));
-                logger.warn(`[AuthorizedQuota] loadCodeAssist failed, continuing without project: ${err.message}`);
             }
+            if (Number.isFinite(info.availableAICredits)) {
+                availableAICredits = Math.max(0, Number(info.availableAICredits));
+                this.lastAuthorizedAvailableAICredits = availableAICredits;
+            }
+        } catch (error) {
+            if (error instanceof CloudCodeAuthError) {
+                throw error;
+            }
+            const err = error instanceof Error ? error : new Error(String(error));
+            logger.warn(`[AuthorizedQuota] loadCodeAssist failed, continuing without project: ${err.message}`);
         }
 
         const models = await this.fetchAuthorizedQuotaModels(
@@ -838,7 +906,22 @@ export class ReactorCore {
             return this.fetchAuthorizedTelemetry(retryCount + 1);
         }
         this.lastAuthorizedModels = models;
-        return this.buildSnapshot(models);
+
+        const snapshot = this.buildSnapshot(
+            models,
+            undefined,
+            undefined,
+            Number.isFinite(availableAICredits)
+                ? Math.max(0, Number(availableAICredits))
+                : this.getCachedAuthorizedAvailableAICredits(),
+        );
+        const localSnapshot = await this.tryFetchLocalTelemetry();
+        if (localSnapshot?.promptCredits || localSnapshot?.userInfo) {
+            snapshot.promptCredits = localSnapshot.promptCredits;
+            snapshot.userInfo = localSnapshot.userInfo;
+        }
+
+        return snapshot;
     }
 
     private normalizeAccount(value: string | null | undefined): string | null {
@@ -847,6 +930,19 @@ export class ReactorCore {
         }
         const normalized = value.trim().toLowerCase();
         return normalized ? normalized : null;
+    }
+
+    private getCachedAuthorizedAvailableAICredits(): number | undefined {
+        if (Number.isFinite(this.lastAuthorizedAvailableAICredits)) {
+            return Math.max(0, Number(this.lastAuthorizedAvailableAICredits));
+        }
+
+        const snapshotCredits = this.lastSnapshot?.availableAICredits;
+        if (Number.isFinite(snapshotCredits)) {
+            return Math.max(0, Number(snapshotCredits));
+        }
+
+        return undefined;
     }
 
     private resolveAutoGroupFamily(modelId: string, label?: string): AutoGroupFamily | null {
@@ -1220,7 +1316,12 @@ export class ReactorCore {
 
         if (quotaSource === 'local' && this.localUsingRemoteApi && this.lastAuthorizedModels && this.updateHandler) {
             logger.info('Reprocessing cached local(remote API) telemetry data with latest config');
-            const telemetry = this.buildSnapshot(this.lastAuthorizedModels);
+            const telemetry = this.buildSnapshot(
+                this.lastAuthorizedModels,
+                undefined,
+                undefined,
+                this.getCachedAuthorizedAvailableAICredits(),
+            );
             if (this.localAccountEmail) {
                 telemetry.localAccountEmail = this.localAccountEmail;
             }
@@ -1230,7 +1331,12 @@ export class ReactorCore {
 
         if (quotaSource === 'authorized' && this.lastAuthorizedModels && this.updateHandler) {
             logger.info('Reprocessing cached authorized telemetry data with latest config');
-            const telemetry = this.buildSnapshot(this.lastAuthorizedModels);
+            const telemetry = this.buildSnapshot(
+                this.lastAuthorizedModels,
+                undefined,
+                undefined,
+                this.getCachedAuthorizedAvailableAICredits(),
+            );
             this.publishTelemetry(telemetry, 'authorized');
             return;
         }
@@ -1279,7 +1385,12 @@ export class ReactorCore {
         }
 
         if (source === 'local' && this.localUsingRemoteApi && this.lastAuthorizedModels) {
-            const telemetry = this.buildSnapshot(this.lastAuthorizedModels);
+            const telemetry = this.buildSnapshot(
+                this.lastAuthorizedModels,
+                undefined,
+                undefined,
+                this.getCachedAuthorizedAvailableAICredits(),
+            );
             if (this.localAccountEmail) {
                 telemetry.localAccountEmail = this.localAccountEmail;
             }
@@ -1288,7 +1399,12 @@ export class ReactorCore {
         }
 
         if (source === 'authorized' && this.lastAuthorizedModels) {
-            const telemetry = this.buildSnapshot(this.lastAuthorizedModels);
+            const telemetry = this.buildSnapshot(
+                this.lastAuthorizedModels,
+                undefined,
+                undefined,
+                this.getCachedAuthorizedAvailableAICredits(),
+            );
             this.publishTelemetry(telemetry, 'authorized');
             return true;
         }
@@ -1484,6 +1600,7 @@ export class ReactorCore {
         models: ModelQuotaInfo[],
         promptCredits?: PromptCreditsInfo,
         userInfo?: UserInfo,
+        availableAICredits?: number,
     ): QuotaSnapshot {
         const config = configService.getConfig();
         const allModels = [...models];
@@ -1685,6 +1802,7 @@ export class ReactorCore {
 
         return {
             timestamp: new Date(),
+            availableAICredits,
             promptCredits,
             userInfo,
             models,
@@ -1696,7 +1814,12 @@ export class ReactorCore {
 
     public buildAuthorizedSnapshotFromResponse(data: unknown, updatedAt?: number): QuotaSnapshot {
         const models = this.buildModelsFromAuthorizedResponse(data as AuthorizedQuotaResponse);
-        const snapshot = this.buildSnapshot(models);
+        const snapshot = this.buildSnapshot(
+            models,
+            undefined,
+            undefined,
+            this.getCachedAuthorizedAvailableAICredits(),
+        );
         if (updatedAt) {
             snapshot.timestamp = new Date(updatedAt);
         }

@@ -182,6 +182,16 @@ export class QuotaRefreshManager {
         }
         const age = getApiCacheAge(cached);
         logger.info(`[QuotaRefresh] Using api cache for ${email} (age: ${Math.round(age / 1000)}s, reason: ${reason})`);
-        return this.reactor.buildAuthorizedSnapshotFromResponse(cached!.payload, cached!.updatedAt);
+        const snapshot = this.reactor.buildAuthorizedSnapshotFromResponse(cached!.payload, cached!.updatedAt);
+        try {
+            const credits = await this.reactor.fetchAvailableAICreditsForAccount(email);
+            if (Number.isFinite(credits)) {
+                snapshot.availableAICredits = Math.max(0, Number(credits));
+            }
+        } catch (error) {
+            const err = error instanceof Error ? error : new Error(String(error));
+            logger.warn(`[QuotaRefresh] Failed to enrich credits for ${email}: ${err.message}`);
+        }
+        return snapshot;
     }
 }

@@ -24,6 +24,7 @@ export const en = {
     'Refreshing...': 'Refreshing...',
     'dashboard.showCredits': 'Show Prompt Credits',
     'dashboard.promptCredits': 'Prompt Credits',
+    'dashboard.availableAiCredits': 'Available AI Credits',
     'dashboard.available': 'Available',
     'dashboard.monthly': 'Monthly',
     'dashboard.resetIn': 'Reset In',

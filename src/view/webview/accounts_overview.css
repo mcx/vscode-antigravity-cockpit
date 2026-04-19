@@ -631,6 +631,29 @@ body {
     color: var(--danger);
 }
 
+.card-credits-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(15, 23, 42, 0.16);
+}
+
+.card-credits-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.card-credits-value {
+    font-size: 13px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+}
+
 .card-footer {
     display: flex;
     align-items: center;
@@ -798,6 +821,15 @@ body {
     color: var(--danger);
 }
 
+.compact-credits {
+    display: inline-flex;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+}
+
 .compact-actions {
     display: inline-flex;
     align-items: center;
@@ -917,6 +949,12 @@ body {
 
 .fingerprint-status.unbound {
     color: var(--danger);
+}
+
+.account-credits-inline {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
 }
 
 .quota-grid {

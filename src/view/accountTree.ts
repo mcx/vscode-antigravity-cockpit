@@ -29,7 +29,7 @@ import { openCockpitToolsDesktop } from '../shared/cockpit_tools_launcher';
 // Tree Node Types
 // ============================================================================
 
-export type AccountTreeItem = AccountNode | GroupNode | ModelNode | ToolsStatusNode | LoadingNode | ErrorNode;
+export type AccountTreeItem = AccountNode | GroupNode | ModelNode | CreditsNode | ToolsStatusNode | LoadingNode | ErrorNode;
 
 /**
  * 账号节点 (第1层)
@@ -124,6 +124,22 @@ export class ModelNode extends vscode.TreeItem {
         this.iconPath = new vscode.ThemeIcon('symbol-method');
         this.tooltip = `${model.label}\n${t('accountTree.tooltipModelId')}: ${model.modelId}`;
         this.contextValue = 'model';
+    }
+}
+
+/**
+ * Credits 节点（账号子节点，单独显示）
+ */
+export class CreditsNode extends vscode.TreeItem {
+    constructor(
+        public readonly accountEmail: string,
+        public readonly credits: number | null,
+    ) {
+        super('Credits', vscode.TreeItemCollapsibleState.None);
+        this.description = credits === null ? '--' : formatCreditsNumber(credits);
+        this.iconPath = new vscode.ThemeIcon('credit-card');
+        this.tooltip = `Credits: ${this.description}`;
+        this.contextValue = 'credits';
     }
 }
 
@@ -317,6 +333,9 @@ export class AccountTreeProvider implements vscode.TreeDataProvider<AccountTreeI
             children.push(new ErrorNode(t('accountTree.noQuotaData')));
         }
 
+        // Credits 单独字段
+        children.push(new CreditsNode(email, resolveAvailableAICredits(snapshot)));
+
         // Tools 连接状态节点
         children.push(new ToolsStatusNode(email, cockpitToolsWs.isConnected));
 
@@ -336,6 +355,29 @@ export class AccountTreeProvider implements vscode.TreeDataProvider<AccountTreeI
     async getAccountId(email: string): Promise<string | null> {
         return this.refreshService.getAccountId(email);
     }
+}
+
+function resolveAvailableAICredits(snapshot: { availableAICredits?: number; promptCredits?: { available?: number }; userInfo?: { availablePromptCredits?: number } }): number | null {
+    if (Number.isFinite(snapshot.availableAICredits)) {
+        return Math.max(0, Number(snapshot.availableAICredits));
+    }
+    if (snapshot.promptCredits && Number.isFinite(snapshot.promptCredits.available)) {
+        return Math.max(0, Number(snapshot.promptCredits.available));
+    }
+    if (snapshot.userInfo && Number.isFinite(snapshot.userInfo.availablePromptCredits)) {
+        return Math.max(0, Number(snapshot.userInfo.availablePromptCredits));
+    }
+    return null;
+}
+
+function formatCreditsNumber(value: number): string {
+    if (!Number.isFinite(value)) {
+        return '--';
+    }
+    const rounded = Math.abs(value - Math.round(value)) < 1e-6
+        ? Math.round(value)
+        : Number(value.toFixed(2));
+    return rounded.toLocaleString();
 }
 
 // ============================================================================

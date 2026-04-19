@@ -22,6 +22,7 @@ export const cs = {
     'dashboard.refreshing': 'Obnovování...',
     'dashboard.showCredits': 'Zobrazit Kredity',
     'dashboard.promptCredits': 'Kredity Prompt',
+    'dashboard.availableAiCredits': 'Dostupné AI kredity',
     'dashboard.available': 'Dostupné',
     'dashboard.monthly': 'Měsíčně',
     'dashboard.resetIn': 'Reset za',

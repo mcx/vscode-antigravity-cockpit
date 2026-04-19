@@ -309,6 +309,16 @@
     align-items: flex-start;
 }
 
+.credits-summary-card {
+    border-color: rgba(47, 129, 247, 0.35);
+    background: linear-gradient(135deg, var(--card-bg) 0%, rgba(47, 129, 247, 0.08) 100%);
+}
+
+.credits-summary-card .card-title .label {
+    font-size: 13px;
+    font-weight: 700;
+}
+
 .tier-badge {
     background: var(--accent);
     color: var(--vscode-button-foreground, white);

@@ -257,6 +257,44 @@
         return 'low';
     }
 
+    function toFiniteNumber(value) {
+        const num = Number(value);
+        return Number.isFinite(num) ? num : null;
+    }
+
+    function formatCreditsNumber(value) {
+        if (value === null || value === undefined || !Number.isFinite(value)) {
+            return '--';
+        }
+        const rounded = Math.abs(value - Math.round(value)) < 1e-6
+            ? Math.round(value)
+            : Number(value.toFixed(2));
+        return rounded.toLocaleString();
+    }
+
+    function resolveAccountAvailableAICredits(account) {
+        const direct = toFiniteNumber(account?.availableAICredits);
+        if (direct !== null) {
+            return Math.max(0, direct);
+        }
+
+        const promptAvailable = toFiniteNumber(account?.promptCredits?.available);
+        if (promptAvailable !== null) {
+            return Math.max(0, promptAvailable);
+        }
+
+        const userInfoAvailable = toFiniteNumber(account?.userInfo?.availablePromptCredits);
+        if (userInfoAvailable !== null) {
+            return Math.max(0, userInfoAvailable);
+        }
+
+        return null;
+    }
+
+    function getAvailableAICreditsLabel() {
+        return 'Credits';
+    }
+
     function getTierLabel(account) {
         const raw = (account.tier || '').trim();
         if (!raw) return '';
@@ -599,12 +637,16 @@
         const switchLabel = escapeHtml(getString('switch', 'Switch'));
         const detailsLabel = escapeHtml(getString('details', 'Details'));
         const refreshLabel = escapeHtml(getString('refresh', 'Refresh'));
+        const creditsValue = formatCreditsNumber(resolveAccountAvailableAICredits(account));
 
         return `
             <div class="account-compact-row ${isCurrent ? 'current' : ''} ${isSelected ? 'selected' : ''}" data-email="${escapeHtml(account.email)}">
                 <input type="checkbox" data-action="select" ${isSelected ? 'checked' : ''} data-email="${escapeHtml(account.email)}" />
                 <span class="compact-email" title="${escapeHtml(displayEmail)}">${escapeHtml(displayEmail)}</span>
-                <div class="compact-quotas">${renderCompactQuotaInline(account)}</div>
+                <div class="compact-quotas">
+                    ${renderCompactQuotaInline(account)}
+                    <span class="compact-credits">💳 ${escapeHtml(creditsValue)}</span>
+                </div>
                 <div class="compact-actions">
                     <button class="compact-action-btn" data-action="details" data-email="${escapeHtml(account.email)}" data-tooltip="${detailsLabel}" aria-label="${detailsLabel}">ℹ️</button>
                     ${isCurrent ? `<span class="compact-current-tag">${escapeHtml(getString('current', 'Current'))}</span>` : `<button class="compact-action-btn success" data-action="switch" data-email="${escapeHtml(account.email)}" data-tooltip="${switchLabel}" aria-label="${switchLabel}">▶</button>`}
@@ -628,6 +670,8 @@
         const refreshLabel = escapeHtml(getString('refresh', 'Refresh'));
         const exportLabel = escapeHtml(getString('export', 'Export'));
         const deleteLabel = escapeHtml(getString('delete', 'Delete'));
+        const creditsLabel = getAvailableAICreditsLabel();
+        const creditsValue = formatCreditsNumber(resolveAccountAvailableAICredits(account));
 
         return `
             <div class="account-card ${isCurrent ? 'current' : ''} ${isSelected ? 'selected' : ''}" data-email="${escapeHtml(account.email)}">
@@ -642,6 +686,11 @@
 
                 <div class="card-quota-grid">
                     ${renderQuotaGroups(account)}
+                </div>
+
+                <div class="card-credits-row">
+                    <span class="card-credits-label">💳 ${escapeHtml(creditsLabel)}</span>
+                    <span class="card-credits-value">${escapeHtml(creditsValue)}</span>
                 </div>
 
                 <div class="card-footer">
@@ -674,6 +723,8 @@
         const switchLabel = escapeHtml(getString('switch', 'Switch'));
         const refreshLabel = escapeHtml(getString('refresh', 'Refresh'));
         const deleteLabel = escapeHtml(getString('delete', 'Delete'));
+        const creditsLabel = getAvailableAICreditsLabel();
+        const creditsValue = formatCreditsNumber(resolveAccountAvailableAICredits(account));
 
         const quotaContent = account.loading
             ? `<span class="quota-empty">${escapeHtml(getString('loading', 'Loading...'))}</span>`
@@ -695,6 +746,7 @@
                         <div class="account-sub-line">
                             ${tierBadge}
                             <span class="fingerprint-status ${toolsClass}">🔗 Tools: ${toolsStatus}</span>
+                            <span class="account-credits-inline" title="${escapeHtml(creditsLabel)}">💳 ${escapeHtml(creditsValue)}</span>
                         </div>
                     </div>
                 </td>

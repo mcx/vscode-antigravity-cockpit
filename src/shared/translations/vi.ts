@@ -26,6 +26,7 @@ export const vi = {
     'Refreshing...': 'Đang làm mới...',
     'dashboard.showCredits': 'Hiển thị tín dụng Prompt',
     'dashboard.promptCredits': 'Tín dụng Prompt',
+    'dashboard.availableAiCredits': 'Tín dụng AI khả dụng',
     'dashboard.available': 'Khả dụng',
     'dashboard.monthly': 'Hàng tháng',
     'dashboard.resetIn': 'Đặt lại sau',

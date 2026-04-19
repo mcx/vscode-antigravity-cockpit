@@ -327,6 +327,9 @@ export class CockpitHUD {
             timestamp: snapshot.timestamp,
             isConnected: snapshot.isConnected,
             errorMessage: snapshot.errorMessage,
+            available_ai_credits: Number.isFinite(snapshot.availableAICredits)
+                ? Math.max(0, Number(snapshot.availableAICredits))
+                : undefined,
             prompt_credits: snapshot.promptCredits ? {
                 available: snapshot.promptCredits.available,
                 monthly: snapshot.promptCredits.monthly,
@@ -473,6 +476,7 @@ export class CockpitHUD {
             const error = cache?.error;
             const lastUpdated = cache?.fetchedAt;
             const groups = cache ? this.convertGroups(cache.snapshot) : [];
+            const availableAICredits = cache ? this.resolveAvailableAICredits(cache.snapshot) : null;
 
             accountsList.push({
                 email,
@@ -483,6 +487,7 @@ export class CockpitHUD {
                 error,
                 lastUpdated,
                 groups,
+                availableAICredits,
             });
         }
 
@@ -544,6 +549,19 @@ export class CockpitHUD {
                 resetTimeFormatted: model.timeUntilResetFormatted,
             })),
         }));
+    }
+
+    private resolveAvailableAICredits(snapshot: QuotaSnapshot): number | null {
+        if (Number.isFinite(snapshot.availableAICredits)) {
+            return Math.max(0, Number(snapshot.availableAICredits));
+        }
+        if (snapshot.promptCredits && Number.isFinite(snapshot.promptCredits.available)) {
+            return Math.max(0, Number(snapshot.promptCredits.available));
+        }
+        if (snapshot.userInfo && Number.isFinite(snapshot.userInfo.availablePromptCredits)) {
+            return Math.max(0, Number(snapshot.userInfo.availablePromptCredits));
+        }
+        return null;
     }
 
     /**

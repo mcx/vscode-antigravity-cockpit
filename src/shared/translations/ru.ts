@@ -22,6 +22,7 @@ export const ru = {
     'dashboard.refreshing': 'Обновление...',
     'dashboard.showCredits': 'Показать кредиты',
     'dashboard.promptCredits': 'Кредиты промптов',
+    'dashboard.availableAiCredits': 'Доступные AI-кредиты',
     'dashboard.available': 'Доступно',
     'dashboard.monthly': 'Ежемесячно',
     'dashboard.resetIn': 'Сброс через',

@@ -22,6 +22,7 @@ export const tr = {
     'dashboard.refreshing': 'Yenileniyor...',
     'dashboard.showCredits': 'Kredileri Göster',
     'dashboard.promptCredits': 'Prompt Kredileri',
+    'dashboard.availableAiCredits': 'Kullanılabilir AI Kredileri',
     'dashboard.available': 'Kullanılabilir',
     'dashboard.monthly': 'Aylık',
     'dashboard.resetIn': 'Sıfırlamaya',

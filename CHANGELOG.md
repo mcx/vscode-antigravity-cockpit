@@ -10,6 +10,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.1.52] - 2026-04-19
+
+### Added
+- **AI Credits surfaced across UI**: Added a unified `Credits` display in Status Bar, Account Tree account nodes, and Accounts Overview (card/table/compact views), so available AI credits are visible without opening details.
+- **AI Credits in quota snapshot model**: Added `availableAICredits` in quota snapshots, sourced from `loadCodeAssist` (`paidTier.availableCredits`) and passed through HUD/account overview payloads.
+- **In-app announcement update**: Added a new popup announcement for the author's self-hosted account/redeem-code shop channel.
+
+### Improved
+- **Authorized quota cache replay keeps credits value**: When authorized quota falls back to cached model data, the extension now reuses the last known available AI credits to avoid showing `--` unexpectedly.
+- **Cached API snapshot enrichment**: Using cached API responses now attempts a lightweight credits refresh for the selected account, keeping credits display fresher.
+- **Status bar sync on account cache updates**: Status bar now listens to account cache update events and syncs display when current-account cached snapshot is refreshed.
+
+### Fixed
+- **Credits i18n key synchronization**: Synced the new `dashboard.availableAiCredits` key to all supported locale files to prevent fallback-to-key text in non-Chinese/English locales.
+
 ## [2.1.43] - 2026-04-11
 
 ### Fixed

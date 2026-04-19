@@ -22,6 +22,7 @@ export const fr = {
     'dashboard.refreshing': 'Actualisation...',
     'dashboard.showCredits': 'Afficher les Crédits',
     'dashboard.promptCredits': 'Crédits Prompt',
+    'dashboard.availableAiCredits': 'Crédits AI disponibles',
     'dashboard.available': 'Disponible',
     'dashboard.monthly': 'Mensuel',
     'dashboard.resetIn': 'Réinitialisation dans',

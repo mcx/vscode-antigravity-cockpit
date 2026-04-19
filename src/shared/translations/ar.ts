@@ -24,6 +24,7 @@ export const ar = {
     'Refreshing...': 'جارِ التحديث...',
     'dashboard.showCredits': 'عرض رصيد المطالبات',
     'dashboard.promptCredits': 'رصيد المطالبات',
+    'dashboard.availableAiCredits': 'رصيد AI المتاح',
     'dashboard.available': 'متاح',
     'dashboard.monthly': 'شهري',
     'dashboard.resetIn': 'إعادة تعيين خلال',

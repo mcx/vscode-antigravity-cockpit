@@ -22,6 +22,7 @@ export const ja = {
     'dashboard.refreshing': '更新中...',
     'dashboard.showCredits': 'クレジットを表示',
     'dashboard.promptCredits': 'プロンプトクレジット',
+    'dashboard.availableAiCredits': '利用可能な AI クレジット',
     'dashboard.available': '利用可能',
     'dashboard.monthly': '月間',
     'dashboard.resetIn': 'リセットまで',

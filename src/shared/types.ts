@@ -73,6 +73,8 @@ export interface QuotaGroup {
 export interface QuotaSnapshot {
     /** 时间戳 */
     timestamp: Date;
+    /** 可用 AI 积分（来自 loadCodeAssist paidTier.availableCredits 汇总） */
+    availableAICredits?: number;
     /** Prompt Credits */
     promptCredits?: PromptCreditsInfo;
     /** 用户信息 */

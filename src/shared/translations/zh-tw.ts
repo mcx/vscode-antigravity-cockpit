@@ -24,6 +24,7 @@ export const zhTW = {
     'Refreshing...': '重新整理中...',
     'dashboard.showCredits': '顯示積分',
     'dashboard.promptCredits': 'Prompt 積分',
+    'dashboard.availableAiCredits': '可用 AI 積分',
     'dashboard.available': '可用',
     'dashboard.monthly': '每月額度',
     'dashboard.resetIn': '重置倒計時',

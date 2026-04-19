@@ -22,6 +22,7 @@ export const ko = {
     'dashboard.refreshing': '새로고침 중...',
     'dashboard.showCredits': '크레딧 표시',
     'dashboard.promptCredits': '프롬프트 크레딧',
+    'dashboard.availableAiCredits': '사용 가능한 AI 크레딧',
     'dashboard.available': '사용 가능',
     'dashboard.monthly': '월간',
     'dashboard.resetIn': '재설정까지',
